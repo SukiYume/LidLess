@@ -1,6 +1,6 @@
-# Contributing to AgentLidGuard
+# Contributing to LidLess
 
-Thanks for your interest in improving AgentLidGuard! This is a small,
+Thanks for your interest in improving LidLess! This is a small,
 dependency-free PowerShell project, so contributing is straightforward.
 
 ## Prerequisites
@@ -12,7 +12,7 @@ dependency-free PowerShell project, so contributing is straightforward.
 
 ## Project layout
 
-- `AgentLidGuard.ps1` — command entrypoint and monitor state machine.
+- `LidLess.ps1` — command entrypoint and monitor state machine.
 - `src/*.psm1` — implementation modules, one concern each.
 - `tests/run-tests.ps1` — no-dependency test runner.
 - `docs/design.md` — architecture and rationale.
@@ -27,7 +27,7 @@ See `docs/design.md` before making behavioral changes.
 
 All tests must pass. Add a test for any new parsing, state, or formatting logic.
 The runner is intentionally plain (no Pester dependency); follow the existing
-`Invoke-ALGTest` / `Assert-ALG*` pattern.
+`Invoke-LLTest` / `Assert-LL*` pattern.
 
 ## Linting
 
@@ -43,7 +43,7 @@ CI fails on `Error`-severity findings. Warnings are advisory.
 
 ## Coding conventions
 
-- Functions are named `Verb-ALGNoun` and exported explicitly via
+- Functions are named `Verb-LLNoun` and exported explicitly via
   `Export-ModuleMember`.
 - `Set-StrictMode -Version 2.0` is on everywhere; avoid relying on undefined
   variables or properties.

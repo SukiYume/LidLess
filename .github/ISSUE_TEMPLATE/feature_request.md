@@ -7,7 +7,7 @@ labels: enhancement
 
 ## Problem / motivation
 
-What are you trying to do that AgentLidGuard does not support today?
+What are you trying to do that LidLess does not support today?
 
 ## Proposed solution
 

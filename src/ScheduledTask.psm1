@@ -1,6 +1,6 @@
 Set-StrictMode -Version 2.0
 
-function Get-ALGTaskState {
+function Get-LLTaskState {
     param([string]$TaskName)
 
     $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
@@ -11,7 +11,7 @@ function Get-ALGTaskState {
     return "Not installed"
 }
 
-function Register-ALGTask {
+function Register-LLTask {
     param(
         [string]$TaskName,
         [string]$ScriptPath
@@ -48,17 +48,17 @@ function Register-ALGTask {
         -Trigger $trigger `
         -Settings $settings `
         -Principal $principal `
-        -Description "AgentLidGuard keeps configured agent processes awake and network-reachable." `
+        -Description "LidLess keeps configured agent processes awake and network-reachable." `
         -Force | Out-Null
 }
 
-function Start-ALGTask {
+function Start-LLTask {
     param([string]$TaskName)
 
     Start-ScheduledTask -TaskName $TaskName
 }
 
-function Stop-ALGTask {
+function Stop-LLTask {
     param([string]$TaskName)
 
     $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
@@ -69,17 +69,17 @@ function Stop-ALGTask {
     Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
     for ($i = 0; $i -lt 20; $i++) {
         Start-Sleep -Milliseconds 250
-        $state = Get-ALGTaskState -TaskName $TaskName
+        $state = Get-LLTaskState -TaskName $TaskName
         if ($state -ne "Running") {
             return
         }
     }
 }
 
-function Unregister-ALGTask {
+function Unregister-LLTask {
     param([string]$TaskName)
 
     Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
 }
 
-Export-ModuleMember -Function Get-ALGTaskState, Register-ALGTask, Start-ALGTask, Stop-ALGTask, Unregister-ALGTask
+Export-ModuleMember -Function Get-LLTaskState, Register-LLTask, Start-LLTask, Stop-LLTask, Unregister-LLTask

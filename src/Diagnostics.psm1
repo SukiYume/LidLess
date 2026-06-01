@@ -1,6 +1,6 @@
 Set-StrictMode -Version 2.0
 
-function Format-ALGLidAction {
+function Format-LLLidAction {
     param([int]$Value)
 
     switch ($Value) {
@@ -12,7 +12,7 @@ function Format-ALGLidAction {
     }
 }
 
-function Write-ALGStatus {
+function Write-LLStatus {
     param(
         [string]$TaskName,
         [string]$TaskState,
@@ -25,22 +25,22 @@ function Write-ALGStatus {
         $State
     )
 
-    Write-Host "AgentLidGuard status"
+    Write-Host "LidLess status"
     Write-Host "  Task:                 $TaskName ($TaskState)"
     Write-Host "  Power source:         $PowerSource"
     Write-Host "  Source enabled:       $($SourceConfig.Enabled)"
     Write-Host "  Active scheme:        $SchemeGuid"
-    Write-Host "  AC lid:               $(Format-ALGLidAction -Value ([int]$Snapshot.AC.LidAction))"
-    Write-Host "  DC lid:               $(Format-ALGLidAction -Value ([int]$Snapshot.DC.LidAction))"
-    Write-Host "  AC sleep after:       $(Format-ALGDurationSeconds -Seconds ([int]$Snapshot.AC.StandbyIdle))"
-    Write-Host "  DC sleep after:       $(Format-ALGDurationSeconds -Seconds ([int]$Snapshot.DC.StandbyIdle))"
-    Write-Host "  AC hibernate after:   $(Format-ALGDurationSeconds -Seconds ([int]$Snapshot.AC.HibernateIdle))"
-    Write-Host "  DC hibernate after:   $(Format-ALGDurationSeconds -Seconds ([int]$Snapshot.DC.HibernateIdle))"
+    Write-Host "  AC lid:               $(Format-LLLidAction -Value ([int]$Snapshot.AC.LidAction))"
+    Write-Host "  DC lid:               $(Format-LLLidAction -Value ([int]$Snapshot.DC.LidAction))"
+    Write-Host "  AC sleep after:       $(Format-LLDurationSeconds -Seconds ([int]$Snapshot.AC.StandbyIdle))"
+    Write-Host "  DC sleep after:       $(Format-LLDurationSeconds -Seconds ([int]$Snapshot.DC.StandbyIdle))"
+    Write-Host "  AC hibernate after:   $(Format-LLDurationSeconds -Seconds ([int]$Snapshot.AC.HibernateIdle))"
+    Write-Host "  DC hibernate after:   $(Format-LLDurationSeconds -Seconds ([int]$Snapshot.DC.HibernateIdle))"
     Write-Host "  Poll seconds:         $($Config.PollSeconds)"
     Write-Host "  Process names:        $($Config.ProcessNames -join ', ')"
 
     if (@($Matches).Count -gt 0) {
-        $matchText = @($Matches | ForEach-Object { Format-ALGProcessMatch -Process $_ }) -join ", "
+        $matchText = @($Matches | ForEach-Object { Format-LLProcessMatch -Process $_ }) -join ", "
         Write-Host "  Matches:              $matchText"
     }
     else {
@@ -58,12 +58,12 @@ function Write-ALGStatus {
     Write-Host "  Runtime power request: handle=$($State.Runtime.PowerRequest.HasHandle), system=$($State.Runtime.PowerRequest.SystemRequired), execution=$($State.Runtime.PowerRequest.ExecutionRequired)"
 }
 
-function Get-ALGSleepStates {
+function Get-LLSleepStates {
     $output = & powercfg /availablesleepstates 2>&1
     return @($output | Where-Object { $_ -ne "" })
 }
 
-function Get-ALGPowerRequestsText {
+function Get-LLPowerRequestsText {
     try {
         $output = & powercfg /requests 2>&1
         return @($output | Where-Object { $_ -ne "" })
@@ -73,7 +73,7 @@ function Get-ALGPowerRequestsText {
     }
 }
 
-function Convert-ALGEventSummary {
+function Convert-LLEventSummary {
     param($Event)
 
     $message = ($Event.Message -replace "\r?\n", " " -replace "\s+", " ").Trim()
@@ -88,33 +88,33 @@ function Convert-ALGEventSummary {
     }
 }
 
-function Get-ALGDiagnosticStartTime {
+function Get-LLDiagnosticStartTime {
     param([int]$Hours)
 
     return (Get-Date).AddHours(-1 * [Math]::Max(1, $Hours))
 }
 
-function Get-ALGRecentPowerEvents {
+function Get-LLRecentPowerEvents {
     param([int]$Hours = 12)
 
-    $start = Get-ALGDiagnosticStartTime -Hours $Hours
+    $start = Get-LLDiagnosticStartTime -Hours $Hours
     $ids = 42, 107, 187, 506, 507, 566, 41, 172
     return @(Get-WinEvent -FilterHashtable @{LogName = "System"; StartTime = $start} -ErrorAction SilentlyContinue |
         Where-Object { $_.ProviderName -eq "Microsoft-Windows-Kernel-Power" -and $_.Id -in $ids } |
         Sort-Object TimeCreated -Descending |
         Select-Object -First 20 |
-        ForEach-Object { Convert-ALGEventSummary -Event $_ })
+        ForEach-Object { Convert-LLEventSummary -Event $_ })
 }
 
-function Get-ALGRecentWlanEvents {
+function Get-LLRecentWlanEvents {
     param([int]$Hours = 12)
 
-    $start = Get-ALGDiagnosticStartTime -Hours $Hours
+    $start = Get-LLDiagnosticStartTime -Hours $Hours
     return @(Get-WinEvent -FilterHashtable @{LogName = "Microsoft-Windows-WLAN-AutoConfig/Operational"; StartTime = $start} -ErrorAction SilentlyContinue |
         Where-Object { $_.Id -in 8000, 8001, 8002, 8003, 11000, 11001, 11004, 11005 } |
         Sort-Object TimeCreated -Descending |
         Select-Object -First 20 |
-        ForEach-Object { Convert-ALGEventSummary -Event $_ })
+        ForEach-Object { Convert-LLEventSummary -Event $_ })
 }
 
-Export-ModuleMember -Function Write-ALGStatus, Get-ALGSleepStates, Get-ALGPowerRequestsText, Get-ALGRecentPowerEvents, Get-ALGRecentWlanEvents
+Export-ModuleMember -Function Write-LLStatus, Get-LLSleepStates, Get-LLPowerRequestsText, Get-LLRecentPowerEvents, Get-LLRecentWlanEvents

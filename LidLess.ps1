@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    AgentLidGuard keeps configured agent processes usable after laptop lid close.
+    LidLess keeps configured agent processes usable after laptop lid close.
 .DESCRIPTION
     Commands:
       start  - register and start the SYSTEM scheduled-task runner
@@ -27,8 +27,8 @@ $ConfigPath = Join-Path $ScriptRoot "config.json"
 $StateDir = Join-Path $ScriptRoot "state"
 $StatePath = Join-Path $StateDir "state.json"
 $LogDir = Join-Path $ScriptRoot "logs"
-$LogPath = Join-Path $LogDir "AgentLidGuard.log"
-$TaskName = "AgentLidGuard"
+$LogPath = Join-Path $LogDir "LidLess.log"
+$TaskName = "LidLess"
 
 Import-Module (Join-Path $SrcRoot "RuntimeSupport.psm1") -Force -DisableNameChecking
 Import-Module (Join-Path $SrcRoot "Config.psm1") -Force -DisableNameChecking
@@ -49,11 +49,11 @@ $Context = [pscustomobject]@{
 }
 
 function Get-CurrentInputs {
-    $config = Get-ALGConfig -ConfigPath $Context.ConfigPath
-    $powerSource = Get-ALGPowerSource
-    $sourceConfig = Get-ALGSourceConfig -Config $config -PowerSource $powerSource
-    $matchedProcesses = Get-ALGMatchingProcesses -ProcessNames $config.ProcessNames
-    $schemeGuid = Get-ALGActivePowerSchemeGuid
+    $config = Get-LLConfig -ConfigPath $Context.ConfigPath
+    $powerSource = Get-LLPowerSource
+    $sourceConfig = Get-LLSourceConfig -Config $config -PowerSource $powerSource
+    $matchedProcesses = Get-LLMatchingProcesses -ProcessNames $config.ProcessNames
+    $schemeGuid = Get-LLActivePowerSchemeGuid
 
     return [pscustomobject]@{
         Config = $config
@@ -73,14 +73,14 @@ function Set-RuntimeState {
         [string]$Reason
     )
 
-    $matchText = @($Matches | ForEach-Object { Format-ALGProcessMatch -Process $_ })
-    Set-ALGStateRuntime `
+    $matchText = @($Matches | ForEach-Object { Format-LLProcessMatch -Process $_ })
+    Set-LLStateRuntime `
         -State $State `
         -Protected $Protected `
         -PowerSource $PowerSource `
         -Matches $matchText `
         -Reason $Reason `
-        -PowerRequestState (Get-ALGPowerRequestState)
+        -PowerRequestState (Get-LLPowerRequestState)
 }
 
 function Restore-AllProtection {
@@ -89,34 +89,34 @@ function Restore-AllProtection {
         [string]$Reason = "restore"
     )
 
-    Clear-ALGPowerRequest
-    $state = Read-ALGState -StatePath $Context.StatePath
-    Restore-ALGPolicyProtection -State $state | Out-Null
-    Set-RuntimeState -State $state -Protected $false -PowerSource (Get-ALGPowerSource) -Matches @() -Reason $Reason
+    Clear-LLPowerRequest
+    $state = Read-LLState -StatePath $Context.StatePath
+    Restore-LLPolicyProtection -State $state | Out-Null
+    Set-RuntimeState -State $state -Protected $false -PowerSource (Get-LLPowerSource) -Matches @() -Reason $Reason
 
     if ($RemoveStateFile) {
-        Remove-ALGState -StatePath $Context.StatePath
+        Remove-LLState -StatePath $Context.StatePath
     }
     else {
-        Save-ALGState -StatePath $Context.StatePath -State $state
+        Save-LLState -StatePath $Context.StatePath -State $state
     }
 }
 
 function Invoke-MonitorTick {
     $inputs = Get-CurrentInputs
-    $state = Read-ALGState -StatePath $Context.StatePath
+    $state = Read-LLState -StatePath $Context.StatePath
     $hasMatches = @($inputs.Matches).Count -gt 0
     $currentSourceEnabled = [bool]$inputs.SourceConfig.Enabled
 
     if ($hasMatches -and $currentSourceEnabled) {
-        Enable-ALGPolicyProtection `
+        Enable-LLPolicyProtection `
             -State $state `
             -Config $inputs.Config `
             -SchemeGuid $inputs.SchemeGuid `
             -LogPath $Context.LogPath | Out-Null
 
-        $reason = "AgentLidGuard: protected agent process is running"
-        Set-ALGPowerRequest `
+        $reason = "LidLess: protected agent process is running"
+        Set-LLPowerRequest `
             -Reason $reason `
             -SystemRequired ([bool]$inputs.SourceConfig.HoldSystemRequiredRequest) `
             -ExecutionRequired ([bool]$inputs.SourceConfig.HoldExecutionRequiredRequest)
@@ -128,15 +128,15 @@ function Invoke-MonitorTick {
             -Matches $inputs.Matches `
             -Reason "matched process and source enabled"
 
-        Save-ALGState -StatePath $Context.StatePath -State $state
+        Save-LLState -StatePath $Context.StatePath -State $state
 
-        $names = @($inputs.Matches | ForEach-Object { Format-ALGProcessMatch -Process $_ }) -join ", "
-        Write-ALGLog -LogPath $Context.LogPath -Message "Protected active. Source=$($inputs.PowerSource), Matches=$names"
+        $names = @($inputs.Matches | ForEach-Object { Format-LLProcessMatch -Process $_ }) -join ", "
+        Write-LLLog -LogPath $Context.LogPath -Message "Protected active. Source=$($inputs.PowerSource), Matches=$names"
         return
     }
 
-    Clear-ALGPowerRequest
-    Restore-ALGPolicyProtection -State $state | Out-Null
+    Clear-LLPowerRequest
+    Restore-LLPolicyProtection -State $state | Out-Null
 
     $reason = if ($hasMatches) {
         "matched process but current source $($inputs.PowerSource) is disabled"
@@ -152,34 +152,34 @@ function Invoke-MonitorTick {
         -Matches $inputs.Matches `
         -Reason $reason
 
-    Save-ALGState -StatePath $Context.StatePath -State $state
-    Write-ALGLog -LogPath $Context.LogPath -Message "Protection inactive. Reason=$reason"
+    Save-LLState -StatePath $Context.StatePath -State $state
+    Write-LLLog -LogPath $Context.LogPath -Message "Protection inactive. Reason=$reason"
 }
 
 function Start-MonitorLoop {
-    Ensure-ALGAdmin -ScriptPath $Context.ScriptPath -Command "run"
-    Write-ALGLog -LogPath $Context.LogPath -Message "Monitor loop started."
+    Ensure-LLAdmin -ScriptPath $Context.ScriptPath -Command "run"
+    Write-LLLog -LogPath $Context.LogPath -Message "Monitor loop started."
 
     $consecutiveFailures = 0
     $maxConsecutiveFailures = 5
 
     while ($true) {
         try {
-            $config = Get-ALGConfig -ConfigPath $Context.ConfigPath
+            $config = Get-LLConfig -ConfigPath $Context.ConfigPath
             Invoke-MonitorTick
             $consecutiveFailures = 0
             Start-Sleep -Seconds $config.PollSeconds
         }
         catch {
             $consecutiveFailures++
-            Write-ALGLog -LogPath $Context.LogPath -Message "Monitor tick failed ($consecutiveFailures/$maxConsecutiveFailures): $($_.Exception.Message)"
+            Write-LLLog -LogPath $Context.LogPath -Message "Monitor tick failed ($consecutiveFailures/$maxConsecutiveFailures): $($_.Exception.Message)"
             if ($consecutiveFailures -ge $maxConsecutiveFailures) {
-                Write-ALGLog -LogPath $Context.LogPath -Message "Monitor exiting after $consecutiveFailures consecutive tick failures so the scheduled task can restart it."
+                Write-LLLog -LogPath $Context.LogPath -Message "Monitor exiting after $consecutiveFailures consecutive tick failures so the scheduled task can restart it."
                 try {
                     Restore-AllProtection -Reason "monitor failure threshold"
                 }
                 catch {
-                    Write-ALGLog -LogPath $Context.LogPath -Message "Failed to restore protection before monitor restart: $($_.Exception.Message)"
+                    Write-LLLog -LogPath $Context.LogPath -Message "Failed to restore protection before monitor restart: $($_.Exception.Message)"
                 }
                 exit 1
             }
@@ -188,45 +188,45 @@ function Start-MonitorLoop {
     }
 }
 
-function Start-AgentLidGuard {
-    Ensure-ALGAdmin -ScriptPath $Context.ScriptPath -Command "start"
-    $config = Get-ALGConfig -ConfigPath $Context.ConfigPath
-    $previousTaskState = Get-ALGTaskState -TaskName $Context.TaskName
+function Start-LidLess {
+    Ensure-LLAdmin -ScriptPath $Context.ScriptPath -Command "start"
+    $config = Get-LLConfig -ConfigPath $Context.ConfigPath
+    $previousTaskState = Get-LLTaskState -TaskName $Context.TaskName
 
     if (Test-Path $Context.StatePath) {
         Restore-AllProtection -RemoveStateFile -Reason "start cleanup"
-        Write-ALGLog -LogPath $Context.LogPath -Message "Recovered residual state before start. PreviousTaskState=$previousTaskState"
+        Write-LLLog -LogPath $Context.LogPath -Message "Recovered residual state before start. PreviousTaskState=$previousTaskState"
     }
 
-    Register-ALGTask -TaskName $Context.TaskName -ScriptPath $Context.ScriptPath
-    Start-ALGTask -TaskName $Context.TaskName
+    Register-LLTask -TaskName $Context.TaskName -ScriptPath $Context.ScriptPath
+    Start-LLTask -TaskName $Context.TaskName
 
-    Write-ALGLog -LogPath $Context.LogPath -Message "Service started. PollSeconds=$($config.PollSeconds)"
-    Write-Host "AgentLidGuard started as SYSTEM scheduled task '$($Context.TaskName)'."
+    Write-LLLog -LogPath $Context.LogPath -Message "Service started. PollSeconds=$($config.PollSeconds)"
+    Write-Host "LidLess started as SYSTEM scheduled task '$($Context.TaskName)'."
 }
 
-function Stop-AgentLidGuard {
-    Ensure-ALGAdmin -ScriptPath $Context.ScriptPath -Command "stop"
+function Stop-LidLess {
+    Ensure-LLAdmin -ScriptPath $Context.ScriptPath -Command "stop"
 
-    Stop-ALGTask -TaskName $Context.TaskName
-    Unregister-ALGTask -TaskName $Context.TaskName
+    Stop-LLTask -TaskName $Context.TaskName
+    Unregister-LLTask -TaskName $Context.TaskName
     Restore-AllProtection -RemoveStateFile -Reason "service stopped"
 
-    Write-ALGLog -LogPath $Context.LogPath -Message "Service stopped and policy restored."
-    Write-Host "AgentLidGuard stopped, power requests released, and touched settings restored."
+    Write-LLLog -LogPath $Context.LogPath -Message "Service stopped and policy restored."
+    Write-Host "LidLess stopped, power requests released, and touched settings restored."
 }
 
 function Show-Status {
-    $config = Get-ALGConfig -ConfigPath $Context.ConfigPath
-    $state = Read-ALGState -StatePath $Context.StatePath
-    $schemeGuid = Get-ALGActivePowerSchemeGuid
-    $snapshot = Get-ALGPowerPolicySnapshot -SchemeGuid $schemeGuid
-    $powerSource = Get-ALGPowerSource
-    $sourceConfig = Get-ALGSourceConfig -Config $config -PowerSource $powerSource
-    $matchedProcesses = Get-ALGMatchingProcesses -ProcessNames $config.ProcessNames
-    $taskState = Get-ALGTaskState -TaskName $Context.TaskName
+    $config = Get-LLConfig -ConfigPath $Context.ConfigPath
+    $state = Read-LLState -StatePath $Context.StatePath
+    $schemeGuid = Get-LLActivePowerSchemeGuid
+    $snapshot = Get-LLPowerPolicySnapshot -SchemeGuid $schemeGuid
+    $powerSource = Get-LLPowerSource
+    $sourceConfig = Get-LLSourceConfig -Config $config -PowerSource $powerSource
+    $matchedProcesses = Get-LLMatchingProcesses -ProcessNames $config.ProcessNames
+    $taskState = Get-LLTaskState -TaskName $Context.TaskName
 
-    Write-ALGStatus `
+    Write-LLStatus `
         -TaskName $Context.TaskName `
         -TaskState $taskState `
         -PowerSource $powerSource `
@@ -240,41 +240,41 @@ function Show-Status {
 
 function Show-Doctor {
     Show-Status
-    $config = Get-ALGConfig -ConfigPath $Context.ConfigPath
+    $config = Get-LLConfig -ConfigPath $Context.ConfigPath
     Write-Host ""
     Write-Host "Diagnostics"
     Write-Host "  Available sleep states:"
-    Get-ALGSleepStates | ForEach-Object { Write-Host "    $_" }
+    Get-LLSleepStates | ForEach-Object { Write-Host "    $_" }
     Write-Host ""
     Write-Host "  powercfg /requests:"
-    Get-ALGPowerRequestsText | ForEach-Object { Write-Host "    $_" }
+    Get-LLPowerRequestsText | ForEach-Object { Write-Host "    $_" }
     if ([bool]$config.Diagnostics.IncludeRecentPowerEvents) {
         Write-Host ""
         Write-Host "  Recent power events:"
-        Get-ALGRecentPowerEvents -Hours $config.Diagnostics.EventLookbackHours | ForEach-Object {
+        Get-LLRecentPowerEvents -Hours $config.Diagnostics.EventLookbackHours | ForEach-Object {
             Write-Host ("    {0:yyyy-MM-dd HH:mm:ss} [{1}] {2}" -f $_.TimeCreated, $_.Id, $_.Summary)
         }
     }
     Write-Host ""
     Write-Host "  Recent WLAN events:"
-    Get-ALGRecentWlanEvents -Hours $config.Diagnostics.EventLookbackHours | ForEach-Object {
+    Get-LLRecentWlanEvents -Hours $config.Diagnostics.EventLookbackHours | ForEach-Object {
         Write-Host ("    {0:yyyy-MM-dd HH:mm:ss} [{1}] {2}" -f $_.TimeCreated, $_.Id, $_.Summary)
     }
 }
 
 switch ($Command) {
-    "start" { Start-AgentLidGuard }
-    "stop" { Stop-AgentLidGuard }
+    "start" { Start-LidLess }
+    "stop" { Stop-LidLess }
     "status" { Show-Status }
     "doctor" { Show-Doctor }
     "run" { Start-MonitorLoop }
     "once" {
-        Ensure-ALGAdmin -ScriptPath $Context.ScriptPath -Command "once"
+        Ensure-LLAdmin -ScriptPath $Context.ScriptPath -Command "once"
         Invoke-MonitorTick
-        Clear-ALGPowerRequest
-        $state = Read-ALGState -StatePath $Context.StatePath
-        Set-ALGStatePowerRequest -State $state -PowerRequestState (Get-ALGPowerRequestState)
-        Save-ALGState -StatePath $Context.StatePath -State $state
+        Clear-LLPowerRequest
+        $state = Read-LLState -StatePath $Context.StatePath
+        Set-LLStatePowerRequest -State $state -PowerRequestState (Get-LLPowerRequestState)
+        Save-LLState -StatePath $Context.StatePath -State $state
         Show-Status
     }
 }

@@ -9,7 +9,7 @@ Import-Module (Join-Path $RepoRoot "src\StateStore.psm1") -Force -DisableNameChe
 
 $script:Passed = 0
 
-function Assert-ALGTrue {
+function Assert-LLTrue {
     param(
         [bool]$Condition,
         [string]$Message
@@ -20,7 +20,7 @@ function Assert-ALGTrue {
     }
 }
 
-function Assert-ALGEqual {
+function Assert-LLEqual {
     param(
         $Expected,
         $Actual,
@@ -32,7 +32,7 @@ function Assert-ALGEqual {
     }
 }
 
-function Invoke-ALGTest {
+function Invoke-LLTest {
     param(
         [string]$Name,
         [scriptblock]$Body
@@ -43,7 +43,7 @@ function Invoke-ALGTest {
     Write-Host "[pass] $Name"
 }
 
-Invoke-ALGTest "PowerShell files parse" {
+Invoke-LLTest "PowerShell files parse" {
     $allErrors = @()
     Get-ChildItem -Path $RepoRoot -Recurse -Include *.ps1, *.psm1 | ForEach-Object {
         $tokens = $null
@@ -54,15 +54,15 @@ Invoke-ALGTest "PowerShell files parse" {
         }
     }
 
-    Assert-ALGEqual 0 $allErrors.Count ($allErrors -join [Environment]::NewLine)
+    Assert-LLEqual 0 $allErrors.Count ($allErrors -join [Environment]::NewLine)
 }
 
-Invoke-ALGTest "Default config focuses on task-like agent processes" {
-    $config = New-ALGDefaultConfig
-    Assert-ALGEqual "claude,codex,Codex Desktop" ($config.ProcessNames -join ",") "Unexpected default process names."
+Invoke-LLTest "Default config focuses on task-like agent processes" {
+    $config = New-LLDefaultConfig
+    Assert-LLEqual "claude,codex,Codex Desktop" ($config.ProcessNames -join ",") "Unexpected default process names."
 }
 
-Invoke-ALGTest "Config normalizes exe suffix and de-duplicates case-insensitively" {
+Invoke-LLTest "Config normalizes exe suffix and de-duplicates case-insensitively" {
     $tempDir = Join-Path $env:TEMP ("alg-test-" + [guid]::NewGuid())
     New-Item -ItemType Directory -Path $tempDir | Out-Null
     try {
@@ -76,16 +76,16 @@ Invoke-ALGTest "Config normalizes exe suffix and de-duplicates case-insensitivel
 }
 "@ | Set-Content -Path $configPath -Encoding UTF8
 
-        $config = Get-ALGConfig -ConfigPath $configPath
-        Assert-ALGEqual "codex,claude" ($config.ProcessNames -join ",") "Process names were not normalized."
-        Assert-ALGEqual 2 $config.PollSeconds "PollSeconds should be clamped to minimum."
+        $config = Get-LLConfig -ConfigPath $configPath
+        Assert-LLEqual "codex,claude" ($config.ProcessNames -join ",") "Process names were not normalized."
+        Assert-LLEqual 2 $config.PollSeconds "PollSeconds should be clamped to minimum."
     }
     finally {
         Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
 
-Invoke-ALGTest "Legacy state with missing PowerRequest is repaired" {
+Invoke-LLTest "Legacy state with missing PowerRequest is repaired" {
     $tempDir = Join-Path $env:TEMP ("alg-test-" + [guid]::NewGuid())
     New-Item -ItemType Directory -Path $tempDir | Out-Null
     try {
@@ -102,24 +102,24 @@ Invoke-ALGTest "Legacy state with missing PowerRequest is repaired" {
 }
 "@ | Set-Content -Path $statePath -Encoding UTF8
 
-        $state = Read-ALGState -StatePath $statePath
-        Assert-ALGTrue ($state.Runtime.PSObject.Properties.Name -contains "PowerRequest") "PowerRequest was not added."
-        Assert-ALGTrue ($state.Runtime.PowerRequest.PSObject.Properties.Name -contains "HasHandle") "HasHandle was not added."
-        Assert-ALGTrue ($state.Runtime.PSObject.Properties.Name -contains "LastHeartbeatAt") "LastHeartbeatAt was not added."
-        Assert-ALGTrue ($state.Runtime.PSObject.Properties.Name -contains "MonitorProcessId") "MonitorProcessId was not added."
+        $state = Read-LLState -StatePath $statePath
+        Assert-LLTrue ($state.Runtime.PSObject.Properties.Name -contains "PowerRequest") "PowerRequest was not added."
+        Assert-LLTrue ($state.Runtime.PowerRequest.PSObject.Properties.Name -contains "HasHandle") "HasHandle was not added."
+        Assert-LLTrue ($state.Runtime.PSObject.Properties.Name -contains "LastHeartbeatAt") "LastHeartbeatAt was not added."
+        Assert-LLTrue ($state.Runtime.PSObject.Properties.Name -contains "MonitorProcessId") "MonitorProcessId was not added."
     }
     finally {
         Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
 
-Invoke-ALGTest "Process match formatting is shared" {
+Invoke-LLTest "Process match formatting is shared" {
     $process = [pscustomobject]@{
         ProcessName = "codex"
         Id = 1234
     }
 
-    Assert-ALGEqual "codex[1234]" (Format-ALGProcessMatch -Process $process) "Unexpected match text."
+    Assert-LLEqual "codex[1234]" (Format-LLProcessMatch -Process $process) "Unexpected match text."
 }
 
 Write-Host "All tests passed ($script:Passed)."

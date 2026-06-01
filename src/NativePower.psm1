@@ -4,8 +4,8 @@ $script:PowerRequestHandle = [IntPtr]::Zero
 $script:SystemRequestSet = $false
 $script:ExecutionRequestSet = $false
 
-function Ensure-ALGNativePowerTypes {
-    if (([System.Management.Automation.PSTypeName]"AgentLidGuard.NativePower").Type) {
+function Ensure-LLNativePowerTypes {
+    if (([System.Management.Automation.PSTypeName]"LidLess.NativePower").Type) {
         return
     }
 
@@ -13,7 +13,7 @@ function Ensure-ALGNativePowerTypes {
 using System;
 using System.Runtime.InteropServices;
 
-namespace AgentLidGuard {
+namespace LidLess {
     [StructLayout(LayoutKind.Sequential)]
     public struct SYSTEM_POWER_STATUS {
         public byte ACLineStatus;
@@ -61,11 +61,11 @@ namespace AgentLidGuard {
 "@
 }
 
-function Get-ALGPowerSource {
+function Get-LLPowerSource {
     try {
-        Ensure-ALGNativePowerTypes
-        $status = New-Object AgentLidGuard.SYSTEM_POWER_STATUS
-        $ok = [AgentLidGuard.NativePower]::GetSystemPowerStatus([ref]$status)
+        Ensure-LLNativePowerTypes
+        $status = New-Object LidLess.SYSTEM_POWER_STATUS
+        $ok = [LidLess.NativePower]::GetSystemPowerStatus([ref]$status)
         if ($ok -and $status.ACLineStatus -eq 0) {
             return "DC"
         }
@@ -77,19 +77,19 @@ function Get-ALGPowerSource {
     return "AC"
 }
 
-function New-ALGPowerRequestHandle {
+function New-LLPowerRequestHandle {
     param([string]$Reason)
 
-    Ensure-ALGNativePowerTypes
+    Ensure-LLNativePowerTypes
 
     $reasonPtr = [Runtime.InteropServices.Marshal]::StringToHGlobalUni($Reason)
     try {
-        $context = New-Object AgentLidGuard.REASON_CONTEXT
-        $context.Version = [AgentLidGuard.NativePower]::POWER_REQUEST_CONTEXT_VERSION
-        $context.Flags = [AgentLidGuard.NativePower]::POWER_REQUEST_CONTEXT_SIMPLE_STRING
+        $context = New-Object LidLess.REASON_CONTEXT
+        $context.Version = [LidLess.NativePower]::POWER_REQUEST_CONTEXT_VERSION
+        $context.Flags = [LidLess.NativePower]::POWER_REQUEST_CONTEXT_SIMPLE_STRING
         $context.SimpleReasonString = $reasonPtr
 
-        $handle = [AgentLidGuard.NativePower]::PowerCreateRequest([ref]$context)
+        $handle = [LidLess.NativePower]::PowerCreateRequest([ref]$context)
         $invalid = [IntPtr]::new(-1)
         if ($handle -eq [IntPtr]::Zero -or $handle -eq $invalid) {
             $err = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
@@ -105,19 +105,19 @@ function New-ALGPowerRequestHandle {
     }
 }
 
-function Set-ALGThreadExecutionRequired {
+function Set-LLThreadExecutionRequired {
     param([bool]$Enabled)
 
-    Ensure-ALGNativePowerTypes
-    $flags = [AgentLidGuard.NativePower]::ES_CONTINUOUS
+    Ensure-LLNativePowerTypes
+    $flags = [LidLess.NativePower]::ES_CONTINUOUS
     if ($Enabled) {
-        $flags = $flags -bor [AgentLidGuard.NativePower]::ES_SYSTEM_REQUIRED
+        $flags = $flags -bor [LidLess.NativePower]::ES_SYSTEM_REQUIRED
     }
 
-    [AgentLidGuard.NativePower]::SetThreadExecutionState($flags) | Out-Null
+    [LidLess.NativePower]::SetThreadExecutionState($flags) | Out-Null
 }
 
-function Set-ALGPowerRequestType {
+function Set-LLPowerRequestType {
     param(
         [int]$RequestType,
         [bool]$Enabled
@@ -128,10 +128,10 @@ function Set-ALGPowerRequestType {
     }
 
     if ($Enabled) {
-        $ok = [AgentLidGuard.NativePower]::PowerSetRequest($script:PowerRequestHandle, $RequestType)
+        $ok = [LidLess.NativePower]::PowerSetRequest($script:PowerRequestHandle, $RequestType)
     }
     else {
-        $ok = [AgentLidGuard.NativePower]::PowerClearRequest($script:PowerRequestHandle, $RequestType)
+        $ok = [LidLess.NativePower]::PowerClearRequest($script:PowerRequestHandle, $RequestType)
     }
 
     if (-not $ok) {
@@ -140,57 +140,57 @@ function Set-ALGPowerRequestType {
     }
 }
 
-function Set-ALGPowerRequest {
+function Set-LLPowerRequest {
     param(
         [string]$Reason,
         [bool]$SystemRequired,
         [bool]$ExecutionRequired
     )
 
-    Ensure-ALGNativePowerTypes
+    Ensure-LLNativePowerTypes
 
     if (-not $SystemRequired -and -not $ExecutionRequired) {
-        Clear-ALGPowerRequest
+        Clear-LLPowerRequest
         return
     }
 
     if ($script:PowerRequestHandle -eq [IntPtr]::Zero) {
-        $script:PowerRequestHandle = New-ALGPowerRequestHandle -Reason $Reason
+        $script:PowerRequestHandle = New-LLPowerRequestHandle -Reason $Reason
     }
 
     if ($SystemRequired -ne $script:SystemRequestSet) {
-        Set-ALGPowerRequestType -RequestType ([AgentLidGuard.NativePower]::PowerRequestSystemRequired) -Enabled $SystemRequired
+        Set-LLPowerRequestType -RequestType ([LidLess.NativePower]::PowerRequestSystemRequired) -Enabled $SystemRequired
         $script:SystemRequestSet = $SystemRequired
     }
 
     if ($ExecutionRequired -ne $script:ExecutionRequestSet) {
-        Set-ALGPowerRequestType -RequestType ([AgentLidGuard.NativePower]::PowerRequestExecutionRequired) -Enabled $ExecutionRequired
+        Set-LLPowerRequestType -RequestType ([LidLess.NativePower]::PowerRequestExecutionRequired) -Enabled $ExecutionRequired
         $script:ExecutionRequestSet = $ExecutionRequired
     }
 
-    Set-ALGThreadExecutionRequired -Enabled $SystemRequired
+    Set-LLThreadExecutionRequired -Enabled $SystemRequired
 }
 
-function Clear-ALGPowerRequest {
-    Ensure-ALGNativePowerTypes
+function Clear-LLPowerRequest {
+    Ensure-LLNativePowerTypes
 
     if ($script:PowerRequestHandle -ne [IntPtr]::Zero) {
         if ($script:SystemRequestSet) {
-            [AgentLidGuard.NativePower]::PowerClearRequest($script:PowerRequestHandle, [AgentLidGuard.NativePower]::PowerRequestSystemRequired) | Out-Null
+            [LidLess.NativePower]::PowerClearRequest($script:PowerRequestHandle, [LidLess.NativePower]::PowerRequestSystemRequired) | Out-Null
         }
         if ($script:ExecutionRequestSet) {
-            [AgentLidGuard.NativePower]::PowerClearRequest($script:PowerRequestHandle, [AgentLidGuard.NativePower]::PowerRequestExecutionRequired) | Out-Null
+            [LidLess.NativePower]::PowerClearRequest($script:PowerRequestHandle, [LidLess.NativePower]::PowerRequestExecutionRequired) | Out-Null
         }
-        [AgentLidGuard.NativePower]::CloseHandle($script:PowerRequestHandle) | Out-Null
+        [LidLess.NativePower]::CloseHandle($script:PowerRequestHandle) | Out-Null
     }
 
     $script:PowerRequestHandle = [IntPtr]::Zero
     $script:SystemRequestSet = $false
     $script:ExecutionRequestSet = $false
-    Set-ALGThreadExecutionRequired -Enabled $false
+    Set-LLThreadExecutionRequired -Enabled $false
 }
 
-function Get-ALGPowerRequestState {
+function Get-LLPowerRequestState {
     return [pscustomobject]@{
         HasHandle = ($script:PowerRequestHandle -ne [IntPtr]::Zero)
         SystemRequired = $script:SystemRequestSet
@@ -198,4 +198,4 @@ function Get-ALGPowerRequestState {
     }
 }
 
-Export-ModuleMember -Function Get-ALGPowerSource, Set-ALGPowerRequest, Clear-ALGPowerRequest, Get-ALGPowerRequestState
+Export-ModuleMember -Function Get-LLPowerSource, Set-LLPowerRequest, Clear-LLPowerRequest, Get-LLPowerRequestState

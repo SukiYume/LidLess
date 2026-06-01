@@ -1,13 +1,13 @@
-# AgentLidGuard
+# LidLess
 
 > Keep your AI agent tasks running after you close the laptop lid — without
 > leaving the machine awake the rest of the time.
 
-![CI](https://github.com/SukiYume/AgentLidGuard/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/SukiYume/LidLess/actions/workflows/ci.yml/badge.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![PowerShell 5.1+](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE.svg)
 
-AgentLidGuard keeps selected Windows agent processes reachable after laptop lid
+LidLess keeps selected Windows agent processes reachable after laptop lid
 close. It is built for tools such as Codex, Claude Code, ChatGPT Desktop, and
 VS Code agent workflows. When a configured agent is running, you can close the
 lid and let a long task finish; the moment the agent exits, normal sleep
@@ -16,7 +16,7 @@ behavior returns.
 The important design point is that this tool does not try to keep networking
 alive inside Modern Standby. On machines where S0 standby is network
 disconnected, that is not reliable for desktop apps. Instead, while a configured
-agent process is running, AgentLidGuard prevents Windows from entering standby
+agent process is running, LidLess prevents Windows from entering standby
 in the first place.
 
 ## Requirements
@@ -38,15 +38,15 @@ in the first place.
 3. From the project folder, start the guard:
 
    ```powershell
-   .\AgentLidGuard.ps1 start
+   .\LidLess.ps1 start
    ```
 
-To stop and fully restore your power settings, run `.\AgentLidGuard.ps1 stop`.
+To stop and fully restore your power settings, run `.\LidLess.ps1 stop`.
 
 ## What It Changes While Protected
 
 When a matching process is running and the current power source is enabled in
-`config.json`, AgentLidGuard can:
+`config.json`, LidLess can:
 
 - Set lid close action to `Do nothing`.
 - Set idle sleep timeout to `0` (`Never`).
@@ -63,11 +63,11 @@ power requests and restores the power settings it changed.
 
 ## Files
 
-- `AgentLidGuard.ps1` - command entrypoint.
+- `LidLess.ps1` - command entrypoint.
 - `config.json` - process and AC/DC protection policy.
 - `src/` - implementation modules.
 - `state/state.json` - runtime state, created while protection is active.
-- `logs/AgentLidGuard.log` - runtime log, created on demand.
+- `logs/LidLess.log` - runtime log, created on demand.
 
 ## Configuration
 
@@ -116,18 +116,18 @@ battery drain.
 Run from the project folder in PowerShell:
 
 ```powershell
-cd path\to\AgentLidGuard
+cd path\to\LidLess
 
-.\AgentLidGuard.ps1 status
-.\AgentLidGuard.ps1 doctor
-.\AgentLidGuard.ps1 start
-.\AgentLidGuard.ps1 stop
+.\LidLess.ps1 status
+.\LidLess.ps1 doctor
+.\LidLess.ps1 start
+.\LidLess.ps1 stop
 ```
 
 If local execution policy blocks direct script execution, use:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\AgentLidGuard.ps1 status
+powershell -NoProfile -ExecutionPolicy Bypass -File .\LidLess.ps1 status
 ```
 
 Commands:
@@ -137,7 +137,7 @@ Commands:
 - `doctor` prints status plus sleep-state, `powercfg /requests`, power event,
   and WLAN event diagnostics.
 - `start` registers and starts a hidden SYSTEM scheduled task named
-  `AgentLidGuard`.
+  `LidLess`.
 - `stop` stops and unregisters the scheduled task, releases power requests, and
   restores touched settings.
 - `run` runs the monitor loop in the foreground for debugging.
@@ -150,8 +150,8 @@ so output stays in the same terminal.
 ### Example `status` output
 
 ```text
-AgentLidGuard status
-  Task:                 AgentLidGuard (Running)
+LidLess status
+  Task:                 LidLess (Running)
   Power source:         AC
   Source enabled:       True
   Active scheme:        381b4222-f694-41f0-9685-ff5bb260df2e
@@ -187,7 +187,7 @@ again and reconciles state.
 
 ## Restore Safety
 
-AgentLidGuard snapshots the original values for every active power scheme it
+LidLess snapshots the original values for every active power scheme it
 touches. It restores only settings it actually changed. If a setting is changed
 manually while the guard is active, restore skips values that no longer look
 service-owned.
@@ -198,7 +198,7 @@ last heartbeat and warns if a protected state remains while the task is not
 running. Running `start` again first reconciles and removes any residual state
 before registering the task.
 
-If `powercfg` hangs, AgentLidGuard times it out rather than letting the monitor
+If `powercfg` hangs, LidLess times it out rather than letting the monitor
 tick block forever. After five consecutive tick failures, the monitor exits with
 a non-zero status so the scheduled task can restart it.
 

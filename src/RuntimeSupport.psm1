@@ -1,18 +1,18 @@
 Set-StrictMode -Version 2.0
 
-function Test-ALGIsAdmin {
+function Test-LLIsAdmin {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal($identity)
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-function Ensure-ALGAdmin {
+function Ensure-LLAdmin {
     param(
         [string]$ScriptPath,
         [string]$Command
     )
 
-    if (Test-ALGIsAdmin) {
+    if (Test-LLIsAdmin) {
         return
     }
 
@@ -22,7 +22,7 @@ function Ensure-ALGAdmin {
     exit 0
 }
 
-function Write-ALGLog {
+function Write-LLLog {
     param(
         [string]$LogPath,
         [string]$Message
@@ -46,7 +46,7 @@ function Write-ALGLog {
     }
 }
 
-function Format-ALGDurationSeconds {
+function Format-LLDurationSeconds {
     param([int]$Seconds)
 
     if ($Seconds -eq 0) {
@@ -61,10 +61,10 @@ function Format-ALGDurationSeconds {
     return "$Seconds sec ($minutes min)"
 }
 
-function Format-ALGProcessMatch {
+function Format-LLProcessMatch {
     param($Process)
 
     return "$($Process.ProcessName)[$($Process.Id)]"
 }
 
-Export-ModuleMember -Function Test-ALGIsAdmin, Ensure-ALGAdmin, Write-ALGLog, Format-ALGDurationSeconds, Format-ALGProcessMatch
+Export-ModuleMember -Function Test-LLIsAdmin, Ensure-LLAdmin, Write-LLLog, Format-LLDurationSeconds, Format-LLProcessMatch

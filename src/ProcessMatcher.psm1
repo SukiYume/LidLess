@@ -1,6 +1,6 @@
 Set-StrictMode -Version 2.0
 
-function Get-ALGMatchingProcesses {
+function Get-LLMatchingProcesses {
     param([string[]]$ProcessNames)
 
     $processMatches = @()
@@ -16,4 +16,4 @@ function Get-ALGMatchingProcesses {
     return @($processMatches | Sort-Object -Property Id -Unique)
 }
 
-Export-ModuleMember -Function Get-ALGMatchingProcesses
+Export-ModuleMember -Function Get-LLMatchingProcesses

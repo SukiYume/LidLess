@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a problem with AgentLidGuard
+about: Report a problem with LidLess
 title: "[bug] "
 labels: bug
 ---
@@ -21,7 +21,7 @@ A clear, concise description of the bug.
 
 ## `doctor` output
 
-Run `.\AgentLidGuard.ps1 doctor` and paste the output (redact anything you
+Run `.\LidLess.ps1 doctor` and paste the output (redact anything you
 consider sensitive):
 
 ```
@@ -33,11 +33,11 @@ consider sensitive):
 - Windows edition and build (`winver`):
 - PowerShell version (`$PSVersionTable.PSVersion`):
 - Laptop / desktop and whether the machine supports Modern Standby (S0):
-- AgentLidGuard version or commit:
+- LidLess version or commit:
 
 ## Relevant log lines
 
-From `logs\AgentLidGuard.log`, if any:
+From `logs\LidLess.log`, if any:
 
 ```
 <paste here>

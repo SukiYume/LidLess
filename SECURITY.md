@@ -1,8 +1,8 @@
 # Security Policy
 
-## What AgentLidGuard does to your system
+## What LidLess does to your system
 
-AgentLidGuard is a power-management tool, so by design it needs elevated access
+LidLess is a power-management tool, so by design it needs elevated access
 and changes system-wide settings. Before running it, understand exactly what it
 touches:
 
@@ -30,7 +30,7 @@ outside the power subsystem and its own `state/` and `logs/` folders.
 
 `stop` releases all power requests and restores every setting it changed, using
 the original values snapshotted in `state/state.json`. It only restores settings
-that still hold the value AgentLidGuard set, so manual changes you made meanwhile
+that still hold the value LidLess set, so manual changes you made meanwhile
 are not clobbered. After `stop`, the machine is left as if the guard had never
 run (logs aside).
 

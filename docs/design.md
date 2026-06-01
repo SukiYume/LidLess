@@ -1,4 +1,4 @@
-# AgentLidGuard Design
+# LidLess Design
 
 ## Goal
 
@@ -35,7 +35,7 @@ it instead of looping forever in a broken state.
 
 ## Components
 
-- `AgentLidGuard.ps1`: command entrypoint and monitor state machine.
+- `LidLess.ps1`: command entrypoint and monitor state machine.
 - `src/RuntimeSupport.psm1`: admin elevation, logging, and shared formatting.
 - `src/Config.psm1`: config parsing, defaults, and backward compatibility with
   the first config format.
