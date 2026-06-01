@@ -1,0 +1,16 @@
+# Runtime state and logs
+state/
+logs/
+
+# Local editor or agent tooling
+.claude/
+.vscode/
+code_review.txt
+
+# PowerShell and temporary files
+*.tmp
+*.log
+*.bak
+*.swp
+Thumbs.db
+Desktop.ini

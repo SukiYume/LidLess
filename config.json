@@ -1,0 +1,28 @@
+{
+  "processNames": [
+    "claude",
+    "codex",
+    "Codex Desktop"
+  ],
+  "pollSeconds": 5,
+  "ac": {
+    "enabled": true,
+    "lidCloseDoNothing": true,
+    "preventIdleSleep": true,
+    "preventHibernate": true,
+    "holdSystemRequiredRequest": true,
+    "holdExecutionRequiredRequest": true
+  },
+  "dc": {
+    "enabled": false,
+    "lidCloseDoNothing": true,
+    "preventIdleSleep": true,
+    "preventHibernate": false,
+    "holdSystemRequiredRequest": true,
+    "holdExecutionRequiredRequest": true
+  },
+  "diagnostics": {
+    "includeRecentPowerEvents": true,
+    "eventLookbackHours": 12
+  }
+}
