@@ -3,7 +3,7 @@
 > Keep your AI agent tasks running after you close the laptop lid — without
 > leaving the machine awake the rest of the time.
 
-![CI](https://github.com/OWNER/AgentLidGuard/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/SukiYume/AgentLidGuard/actions/workflows/ci.yml/badge.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![PowerShell 5.1+](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE.svg)
 

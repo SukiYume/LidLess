@@ -4,16 +4,16 @@
     # is the single source of truth for the version number.
     ModuleVersion     = '1.0.0'
     GUID              = 'eb5597d3-1598-45eb-a2c4-0c8d8ecdfa0d'
-    Author            = 'Echo'
-    Copyright         = '(c) 2026 Echo. MIT License.'
+    Author            = 'XiaoQing'
+    Copyright         = '(c) 2026 XiaoQing. MIT License.'
     Description       = 'Keeps selected Windows agent processes awake and network-reachable after laptop lid close, only while they are running.'
     PowerShellVersion = '5.1'
 
     PrivateData = @{
         PSData = @{
             Tags       = @('Windows', 'PowerManagement', 'Laptop', 'LidClose', 'Sleep', 'Agent', 'powercfg')
-            LicenseUri = 'https://github.com/OWNER/AgentLidGuard/blob/main/LICENSE'
-            ProjectUri = 'https://github.com/OWNER/AgentLidGuard'
+            LicenseUri = 'https://github.com/SukiYume/AgentLidGuard/blob/main/LICENSE'
+            ProjectUri = 'https://github.com/SukiYume/AgentLidGuard'
             ReleaseNotes = 'See CHANGELOG.md.'
         }
     }

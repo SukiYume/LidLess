@@ -31,5 +31,5 @@ First public release.
 - Locale-robust `powercfg` parsing for non-English Windows.
 - No-dependency test runner under `tests/`.
 
-[Unreleased]: https://github.com/OWNER/AgentLidGuard/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/OWNER/AgentLidGuard/releases/tag/v1.0.0
+[Unreleased]: https://github.com/SukiYume/AgentLidGuard/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/SukiYume/AgentLidGuard/releases/tag/v1.0.0
