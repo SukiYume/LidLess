@@ -21,7 +21,7 @@ function Write-LLStatus {
         [string]$SchemeGuid,
         $Snapshot,
         $Config,
-        $Matches,
+        $MatchedProcesses,
         $State
     )
 
@@ -39,8 +39,8 @@ function Write-LLStatus {
     Write-Host "  Poll seconds:         $($Config.PollSeconds)"
     Write-Host "  Process names:        $($Config.ProcessNames -join ', ')"
 
-    if (@($Matches).Count -gt 0) {
-        $matchText = @($Matches | ForEach-Object { Format-LLProcessMatch -Process $_ }) -join ", "
+    if (@($MatchedProcesses).Count -gt 0) {
+        $matchText = @($MatchedProcesses | ForEach-Object { Format-LLProcessMatch -Process $_ }) -join ", "
         Write-Host "  Matches:              $matchText"
     }
     else {
@@ -74,16 +74,16 @@ function Get-LLPowerRequestsText {
 }
 
 function Convert-LLEventSummary {
-    param($Event)
+    param($Record)
 
-    $message = ($Event.Message -replace "\r?\n", " " -replace "\s+", " ").Trim()
+    $message = ($Record.Message -replace "\r?\n", " " -replace "\s+", " ").Trim()
     if ($message.Length -gt 180) {
         $message = $message.Substring(0, 180) + "..."
     }
 
     return [pscustomobject]@{
-        TimeCreated = $Event.TimeCreated
-        Id = $Event.Id
+        TimeCreated = $Record.TimeCreated
+        Id = $Record.Id
         Summary = $message
     }
 }

@@ -161,6 +161,16 @@ then restart with `.\LidLess.ps1 start` to apply.
 | `diagnostics.includeRecentPowerEvents` | Whether `doctor` includes recent Kernel-Power events. |
 | `diagnostics.eventLookbackHours` | How far back `doctor` looks for power/WLAN events. |
 
+To find the right process name, use PowerShell rather than the display name in
+Task Manager:
+
+```powershell
+Get-Process | Sort-Object ProcessName -Unique | Select-Object ProcessName
+```
+
+For example, Claude Code is usually `claude`, Codex is usually `codex`, and
+Visual Studio Code is `Code`.
+
 The lid-close action is the mechanism that stops a closed laptop from entering
 standby. The power requests only supplement idle-sleep prevention; they do not
 override a lid-close sleep action on their own.
@@ -197,6 +207,10 @@ can delete too.
 - **The task is not running.** `status` shows the task state. Re-run
   `.\LidLess.ps1 start` from an elevated prompt and check
   `logs\LidLess.log`.
+- **I moved the folder after starting LidLess.** Run `.\LidLess.ps1 stop` from
+  the old location first if it still exists, then run `.\LidLess.ps1 start`
+  from the new location. The scheduled task stores the script path used at
+  registration time.
 - **Protection seems stuck on after a crash.** If the monitor was killed,
   `powercfg` settings persist until reconciled. `status` warns when a protected
   state remains while the task is not running; run `start` (reconciles and
@@ -236,7 +250,6 @@ Run the no-dependency test script:
 
 ## Documentation
 
-- [docs/design.md](docs/design.md) — architecture and rationale.
 - [CHANGELOG.md](CHANGELOG.md) — release history.
 - [SECURITY.md](SECURITY.md) — what it touches and how to report issues.
 - [CONTRIBUTING.md](CONTRIBUTING.md) — dev setup, tests, and conventions.

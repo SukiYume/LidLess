@@ -6,6 +6,7 @@ logs/
 .claude/
 .vscode/
 code_review.txt
+docs/
 
 # PowerShell and temporary files
 *.tmp

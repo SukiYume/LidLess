@@ -15,9 +15,7 @@ dependency-free PowerShell project, so contributing is straightforward.
 - `LidLess.ps1` — command entrypoint and monitor state machine.
 - `src/*.psm1` — implementation modules, one concern each.
 - `tests/run-tests.ps1` — no-dependency test runner.
-- `docs/design.md` — architecture and rationale.
-
-See `docs/design.md` before making behavioral changes.
+- `README.md` / `README.zh-CN.md` — user-facing documentation.
 
 ## Running the tests
 
@@ -55,8 +53,8 @@ CI fails on `Error`-severity findings. Warnings are advisory.
 ## Pull requests
 
 1. Branch from the default branch.
-2. Keep changes focused; update `docs/design.md` and `CHANGELOG.md` when behavior
-   changes.
+2. Keep changes focused; update the README files and `CHANGELOG.md` when
+   behavior changes.
 3. Ensure tests pass and the analyzer is clean of new errors.
 4. Describe what you changed and how you verified it (see the PR template).
 

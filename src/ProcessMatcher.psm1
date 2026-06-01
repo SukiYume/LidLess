@@ -9,6 +9,7 @@ function Get-LLMatchingProcesses {
             $processMatches += @(Get-Process -Name $name -ErrorAction SilentlyContinue)
         }
         catch {
+            $null = $_
             # Keep monitoring even if one wildcard or process query fails.
         }
     }

@@ -69,16 +69,16 @@ function Set-RuntimeState {
         $State,
         [bool]$Protected,
         [string]$PowerSource,
-        $Matches,
+        $MatchedProcesses,
         [string]$Reason
     )
 
-    $matchText = @($Matches | ForEach-Object { Format-LLProcessMatch -Process $_ })
+    $matchText = @($MatchedProcesses | ForEach-Object { Format-LLProcessMatch -Process $_ })
     Set-LLStateRuntime `
         -State $State `
         -Protected $Protected `
         -PowerSource $PowerSource `
-        -Matches $matchText `
+        -MatchText $matchText `
         -Reason $Reason `
         -PowerRequestState (Get-LLPowerRequestState)
 }
@@ -92,7 +92,7 @@ function Restore-AllProtection {
     Clear-LLPowerRequest
     $state = Read-LLState -StatePath $Context.StatePath
     Restore-LLPolicyProtection -State $state | Out-Null
-    Set-RuntimeState -State $state -Protected $false -PowerSource (Get-LLPowerSource) -Matches @() -Reason $Reason
+    Set-RuntimeState -State $state -Protected $false -PowerSource (Get-LLPowerSource) -MatchedProcesses @() -Reason $Reason
 
     if ($RemoveStateFile) {
         Remove-LLState -StatePath $Context.StatePath
@@ -125,7 +125,7 @@ function Invoke-MonitorTick {
             -State $state `
             -Protected $true `
             -PowerSource $inputs.PowerSource `
-            -Matches $inputs.Matches `
+            -MatchedProcesses $inputs.Matches `
             -Reason "matched process and source enabled"
 
         Save-LLState -StatePath $Context.StatePath -State $state
@@ -149,7 +149,7 @@ function Invoke-MonitorTick {
         -State $state `
         -Protected $false `
         -PowerSource $inputs.PowerSource `
-        -Matches $inputs.Matches `
+        -MatchedProcesses $inputs.Matches `
         -Reason $reason
 
     Save-LLState -StatePath $Context.StatePath -State $state
@@ -234,7 +234,7 @@ function Show-Status {
         -SchemeGuid $schemeGuid `
         -Snapshot $snapshot `
         -Config $config `
-        -Matches $matchedProcesses `
+        -MatchedProcesses $matchedProcesses `
         -State $state
 }
 

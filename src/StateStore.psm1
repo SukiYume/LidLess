@@ -130,7 +130,7 @@ function Set-LLStateRuntime {
         $State,
         [bool]$Protected,
         [string]$PowerSource,
-        [string[]]$Matches,
+        [string[]]$MatchText,
         [string]$Reason,
         $PowerRequestState
     )
@@ -138,7 +138,7 @@ function Set-LLStateRuntime {
     $State.Runtime = [pscustomobject]@{
         Protected = $Protected
         PowerSource = $PowerSource
-        Matches = @($Matches)
+        Matches = @($MatchText)
         Reason = $Reason
         LastHeartbeatAt = (Get-Date).ToString("o")
         MonitorProcessId = $PID

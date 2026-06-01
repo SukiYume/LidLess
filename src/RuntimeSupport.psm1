@@ -42,6 +42,7 @@ function Write-LLLog {
         Add-Content -Path $LogPath -Value $line -Encoding UTF8
     }
     catch {
+        $null = $_
         # Logging must not break power-policy cleanup.
     }
 }

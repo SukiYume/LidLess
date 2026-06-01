@@ -154,6 +154,15 @@ LidLess status
 | `diagnostics.includeRecentPowerEvents` | `doctor` 是否包含近期 Kernel-Power 事件。 |
 | `diagnostics.eventLookbackHours` | `doctor` 回溯电源/WLAN 事件的时间窗口（小时）。 |
 
+查进程名时，请用 PowerShell 里的真实 `ProcessName`，不要直接照抄任务管理器的显示名：
+
+```powershell
+Get-Process | Sort-Object ProcessName -Unique | Select-Object ProcessName
+```
+
+例如 Claude Code 通常是 `claude`，Codex 通常是 `codex`，Visual Studio Code
+是 `Code`。
+
 合盖动作才是真正阻止合盖睡眠的机制；电源请求只是对空闲睡眠的补充，单靠它们无法
 覆盖合盖触发的睡眠动作。
 
@@ -183,6 +192,8 @@ VS Code、ChatGPT Desktop 这类常驻 GUI 默认**不**在列表里，因为它
   `doctor` 里的电源事件有助于判断是什么触发的。
 - **任务没在运行。** `status` 会显示任务状态。在已提权的终端重新运行
   `.\LidLess.ps1 start`，并查看 `logs\LidLess.log`。
+- **启动后移动了文件夹。** 如果旧路径还在，先在旧路径运行 `.\LidLess.ps1 stop`，
+  再到新路径运行 `.\LidLess.ps1 start`。计划任务注册时会保存脚本路径。
 - **崩溃后保护好像卡住了。** 如果监控进程被强杀，`powercfg` 的改动会一直保留直到
   被重新协调。当存在保护状态但任务未运行时，`status` 会给出警告；运行 `start`
   （重新协调并重启）或 `stop`（还原）即可修复。
@@ -217,7 +228,6 @@ LidLess 在修改每一项设置前都会先快照其原始值，并把该设置
 
 ## 文档
 
-- [docs/design.md](docs/design.md) —— 架构与设计理由（英文）。
 - [CHANGELOG.md](CHANGELOG.md) —— 版本历史。
 - [SECURITY.md](SECURITY.md) —— 它会改动什么，以及如何上报问题。
 - [CONTRIBUTING.md](CONTRIBUTING.md) —— 开发环境、测试与约定。

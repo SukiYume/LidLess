@@ -14,6 +14,6 @@ Closes #...
 
 ## Checklist
 
-- [ ] Updated `docs/design.md` if behavior changed
+- [ ] Updated README files if behavior changed
 - [ ] Updated `CHANGELOG.md` under `[Unreleased]`
 - [ ] Power-policy changes remain reversible (snapshot + owned-only restore)

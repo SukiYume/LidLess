@@ -58,6 +58,7 @@ function Invoke-LLPowerCfg {
             $process.Kill()
         }
         catch {
+            $null = $_
             # The process may have exited between WaitForExit and Kill.
         }
         throw "powercfg $($Arguments -join ' ') timed out after $script:PowerCfgTimeoutMilliseconds ms."
