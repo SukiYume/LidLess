@@ -52,7 +52,7 @@ function Write-LLStatus {
     if ($State.Runtime.LastHeartbeatAt) {
         Write-Host "  Runtime heartbeat:    $($State.Runtime.LastHeartbeatAt) (pid=$($State.Runtime.MonitorProcessId))"
     }
-    if ([bool]$State.Runtime.Protected -and $TaskState -ne "Running") {
+    if ([bool]$State.Runtime.Protected -and $TaskState -notin @("Running", "Access denied")) {
         Write-Host "  Runtime warning:      protected state is present but task is not running; run start or stop to reconcile policy."
     }
     Write-Host "  Runtime power request: handle=$($State.Runtime.PowerRequest.HasHandle), system=$($State.Runtime.PowerRequest.SystemRequired), execution=$($State.Runtime.PowerRequest.ExecutionRequired)"

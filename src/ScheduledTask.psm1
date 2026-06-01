@@ -3,9 +3,39 @@ Set-StrictMode -Version 2.0
 function Get-LLTaskState {
     param([string]$TaskName)
 
-    $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-    if ($task) {
-        return [string]$task.State
+    try {
+        $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+        if ($task) {
+            return [string]$task.State
+        }
+    }
+    catch {
+        $message = $_.Exception.Message
+        if ($message -match "Access is denied") {
+            return "Access denied"
+        }
+    }
+
+    $exitCode = 0
+    try {
+        $output = & schtasks.exe /Query /TN $TaskName /FO LIST 2>&1
+        $exitCode = $LASTEXITCODE
+    }
+    catch {
+        $output = @($_.Exception.Message)
+        $exitCode = 1
+    }
+
+    if ($exitCode -ne 0) {
+        $text = ($output | ForEach-Object { $_.ToString() } | Out-String)
+        if ($text -match "Access is denied") {
+            return "Access denied"
+        }
+        if ($text -match "cannot find|not exist") {
+            return "Not installed"
+        }
+
+        return "Unavailable"
     }
 
     return "Not installed"

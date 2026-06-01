@@ -206,7 +206,8 @@ can delete too.
   Windows policy; `doctor`'s power events help confirm what triggered it.
 - **The task is not running.** `status` shows the task state. Re-run
   `.\LidLess.ps1 start` from an elevated prompt and check
-  `logs\LidLess.log`.
+  `logs\LidLess.log`. If `status` shows `Access denied`, re-run `status` from
+  an elevated prompt to see the exact task state.
 - **I moved the folder after starting LidLess.** Run `.\LidLess.ps1 stop` from
   the old location first if it still exists, then run `.\LidLess.ps1 start`
   from the new location. The scheduled task stores the script path used at

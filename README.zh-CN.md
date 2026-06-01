@@ -191,7 +191,8 @@ VS Code、ChatGPT Desktop 这类常驻 GUI 默认**不**在列表里，因为它
   显示为 `0 (Do nothing)`。注意：部分 OEM 固件可能无视 Windows 策略强制睡眠，
   `doctor` 里的电源事件有助于判断是什么触发的。
 - **任务没在运行。** `status` 会显示任务状态。在已提权的终端重新运行
-  `.\LidLess.ps1 start`，并查看 `logs\LidLess.log`。
+  `.\LidLess.ps1 start`，并查看 `logs\LidLess.log`。如果 `status` 显示
+  `Access denied`，请在已提权的终端里重新运行 `status` 查看准确任务状态。
 - **启动后移动了文件夹。** 如果旧路径还在，先在旧路径运行 `.\LidLess.ps1 stop`，
   再到新路径运行 `.\LidLess.ps1 start`。计划任务注册时会保存脚本路径。
 - **崩溃后保护好像卡住了。** 如果监控进程被强杀，`powercfg` 的改动会一直保留直到

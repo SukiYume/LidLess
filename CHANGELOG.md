@@ -6,6 +6,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-06-02
+
+### Fixed
+
+- `status` now distinguishes "not installed" from "access denied" when a
+  non-elevated shell cannot query the elevated scheduled task.
+- Suppressed misleading stale-state warnings when the monitor heartbeat is
+  present but task state cannot be queried without elevation.
+
 ## [1.0.0] - 2026-06-01
 
 First public release.
@@ -31,5 +40,6 @@ First public release.
 - Locale-robust `powercfg` parsing for non-English Windows.
 - No-dependency test runner under `tests/`.
 
-[Unreleased]: https://github.com/SukiYume/LidLess/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/SukiYume/LidLess/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/SukiYume/LidLess/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/SukiYume/LidLess/releases/tag/v1.0.0
