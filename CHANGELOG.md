@@ -13,7 +13,7 @@ First public release.
 ### Added
 
 - Dynamic lid/sleep/hibernate protection that activates only while a configured
-  agent process (e.g. `claude`, `codex`, `Codex Desktop`) is running and the
+  agent process (e.g. `claude`, `codex`) is running and the
   current power source is enabled.
 - Per-source (`AC`/`DC`) configuration in `config.json`, with conservative
   defaults (AC protected, DC disabled).

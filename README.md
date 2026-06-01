@@ -105,7 +105,7 @@ LidLess status
   AC hibernate after:   0 (Never)
   DC hibernate after:   0 (Never)
   Poll seconds:         5
-  Process names:        claude, codex, Codex Desktop
+  Process names:        claude, codex
   Matches:              codex[12840]
   Runtime protected:    True
   Runtime reason:       matched process and source enabled
@@ -120,7 +120,7 @@ then restart with `.\LidLess.ps1 start` to apply.
 
 ```json
 {
-  "processNames": ["claude", "codex", "Codex Desktop"],
+  "processNames": ["claude", "codex"],
   "pollSeconds": 5,
   "ac": {
     "enabled": true,

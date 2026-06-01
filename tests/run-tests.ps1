@@ -59,7 +59,7 @@ Invoke-LLTest "PowerShell files parse" {
 
 Invoke-LLTest "Default config focuses on task-like agent processes" {
     $config = New-LLDefaultConfig
-    Assert-LLEqual "claude,codex,Codex Desktop" ($config.ProcessNames -join ",") "Unexpected default process names."
+    Assert-LLEqual "claude,codex" ($config.ProcessNames -join ",") "Unexpected default process names."
 }
 
 Invoke-LLTest "Config normalizes exe suffix and de-duplicates case-insensitively" {

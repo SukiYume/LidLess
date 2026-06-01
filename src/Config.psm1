@@ -15,7 +15,7 @@ function New-LLDefaultSourceConfig {
 
 function New-LLDefaultConfig {
     return [pscustomobject]@{
-        ProcessNames = @("claude", "codex", "Codex Desktop")
+        ProcessNames = @("claude", "codex")
         PollSeconds = 5
         AC = New-LLDefaultSourceConfig -Enabled $true
         DC = New-LLDefaultSourceConfig -Enabled $false
