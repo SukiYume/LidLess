@@ -1,14 +1,47 @@
 # AgentLidGuard
 
+> Keep your AI agent tasks running after you close the laptop lid — without
+> leaving the machine awake the rest of the time.
+
+![CI](https://github.com/OWNER/AgentLidGuard/actions/workflows/ci.yml/badge.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+![PowerShell 5.1+](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE.svg)
+
 AgentLidGuard keeps selected Windows agent processes reachable after laptop lid
 close. It is built for tools such as Codex, Claude Code, ChatGPT Desktop, and
-VS Code agent workflows.
+VS Code agent workflows. When a configured agent is running, you can close the
+lid and let a long task finish; the moment the agent exits, normal sleep
+behavior returns.
 
 The important design point is that this tool does not try to keep networking
 alive inside Modern Standby. On machines where S0 standby is network
 disconnected, that is not reliable for desktop apps. Instead, while a configured
 agent process is running, AgentLidGuard prevents Windows from entering standby
 in the first place.
+
+## Requirements
+
+- Windows 10 or 11 (laptop, for the lid-close scenario).
+- Windows PowerShell 5.1 or PowerShell 7+.
+- Administrator rights (`start`/`stop`/`run`/`once` self-elevate via UAC).
+
+## Install
+
+1. Download or clone this repository to any folder.
+2. If you downloaded it from the internet, unblock the files so PowerShell will
+   run them (Windows marks downloaded scripts as blocked):
+
+   ```powershell
+   Get-ChildItem -Path . -Recurse | Unblock-File
+   ```
+
+3. From the project folder, start the guard:
+
+   ```powershell
+   .\AgentLidGuard.ps1 start
+   ```
+
+To stop and fully restore your power settings, run `.\AgentLidGuard.ps1 stop`.
 
 ## What It Changes While Protected
 
@@ -80,10 +113,10 @@ battery drain.
 
 ## Commands
 
-Run in PowerShell:
+Run from the project folder in PowerShell:
 
 ```powershell
-cd C:\Users\torch\Desktop\VibeSpace\AgentLidGuard
+cd path\to\AgentLidGuard
 
 .\AgentLidGuard.ps1 status
 .\AgentLidGuard.ps1 doctor
@@ -113,6 +146,29 @@ Commands:
 `start`, `stop`, `run`, and `once` request administrator elevation when needed.
 For foreground debugging with `run` or `once`, open an elevated PowerShell first
 so output stays in the same terminal.
+
+### Example `status` output
+
+```text
+AgentLidGuard status
+  Task:                 AgentLidGuard (Running)
+  Power source:         AC
+  Source enabled:       True
+  Active scheme:        381b4222-f694-41f0-9685-ff5bb260df2e
+  AC lid:               0 (Do nothing)
+  DC lid:               1 (Sleep)
+  AC sleep after:       0 (Never)
+  DC sleep after:       900 sec (15 min)
+  AC hibernate after:   0 (Never)
+  DC hibernate after:   0 (Never)
+  Poll seconds:         5
+  Process names:        claude, codex, Codex Desktop
+  Matches:              codex[12840]
+  Runtime protected:    True
+  Runtime reason:       matched process and source enabled
+  Runtime heartbeat:    2026-06-01T20:31:07.4521820+08:00 (pid=9123)
+  Runtime power request: handle=True, system=True, execution=True
+```
 
 ## Tests
 
@@ -148,3 +204,20 @@ a non-zero status so the scheduled task can restart it.
 
 Stopping the service is intended to leave Windows as if the guard had not been
 running, except for retained logs.
+
+## Documentation
+
+- [docs/design.md](docs/design.md) — architecture and rationale.
+- [CHANGELOG.md](CHANGELOG.md) — release history.
+- [SECURITY.md](SECURITY.md) — what it touches and how to report issues.
+- [CONTRIBUTING.md](CONTRIBUTING.md) — dev setup, tests, and conventions.
+
+## Contributing
+
+Contributions are welcome. Please read
+[CONTRIBUTING.md](CONTRIBUTING.md) and run `.\tests\run-tests.ps1` before
+opening a pull request.
+
+## License
+
+Released under the [MIT License](LICENSE).

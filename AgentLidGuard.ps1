@@ -30,13 +30,13 @@ $LogDir = Join-Path $ScriptRoot "logs"
 $LogPath = Join-Path $LogDir "AgentLidGuard.log"
 $TaskName = "AgentLidGuard"
 
-Import-Module (Join-Path $SrcRoot "Common.psm1") -Force -DisableNameChecking
+Import-Module (Join-Path $SrcRoot "RuntimeSupport.psm1") -Force -DisableNameChecking
 Import-Module (Join-Path $SrcRoot "Config.psm1") -Force -DisableNameChecking
-Import-Module (Join-Path $SrcRoot "ProcessWatch.psm1") -Force -DisableNameChecking
+Import-Module (Join-Path $SrcRoot "ProcessMatcher.psm1") -Force -DisableNameChecking
 Import-Module (Join-Path $SrcRoot "NativePower.psm1") -Force -DisableNameChecking
 Import-Module (Join-Path $SrcRoot "StateStore.psm1") -Force -DisableNameChecking
 Import-Module (Join-Path $SrcRoot "PowerPolicy.psm1") -Force -DisableNameChecking
-Import-Module (Join-Path $SrcRoot "TaskService.psm1") -Force -DisableNameChecking
+Import-Module (Join-Path $SrcRoot "ScheduledTask.psm1") -Force -DisableNameChecking
 Import-Module (Join-Path $SrcRoot "Diagnostics.psm1") -Force -DisableNameChecking
 
 $Context = [pscustomobject]@{

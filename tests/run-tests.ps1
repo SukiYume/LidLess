@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 
-Import-Module (Join-Path $RepoRoot "src\Common.psm1") -Force -DisableNameChecking
+Import-Module (Join-Path $RepoRoot "src\RuntimeSupport.psm1") -Force -DisableNameChecking
 Import-Module (Join-Path $RepoRoot "src\Config.psm1") -Force -DisableNameChecking
 Import-Module (Join-Path $RepoRoot "src\StateStore.psm1") -Force -DisableNameChecking
 
