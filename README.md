@@ -1,5 +1,7 @@
 # LidLess
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 > Keep your AI agent tasks running after you close the laptop lid — without
 > leaving the machine awake the rest of the time.
 
@@ -7,17 +9,28 @@
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![PowerShell 5.1+](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE.svg)
 
-LidLess keeps selected Windows agent processes reachable after laptop lid
-close. It is built for tools such as Codex, Claude Code, ChatGPT Desktop, and
-VS Code agent workflows. When a configured agent is running, you can close the
-lid and let a long task finish; the moment the agent exits, normal sleep
-behavior returns.
+LidLess keeps selected Windows agent processes reachable after laptop lid close.
+It is built for tools such as Codex, Claude Code, ChatGPT Desktop, and VS Code
+agent workflows. When a configured agent is running, you can close the lid and
+let a long task finish; the moment the agent exits, normal sleep behavior
+returns.
 
-The important design point is that this tool does not try to keep networking
-alive inside Modern Standby. On machines where S0 standby is network
-disconnected, that is not reliable for desktop apps. Instead, while a configured
-agent process is running, LidLess prevents Windows from entering standby
-in the first place.
+On Modern Standby (S0) laptops, networking is often disconnected during standby,
+so trying to keep connections alive inside standby is unreliable. LidLess takes
+the opposite approach: while a configured agent is running, it stops Windows from
+entering standby at all, which keeps the machine awake and online.
+
+## How it works
+
+LidLess runs a small monitor as a `SYSTEM` scheduled task. Every few seconds it
+checks two things:
+
+1. Is at least one configured process running?
+2. Is the current power source (`AC` or `DC`) enabled in `config.json`?
+
+When **both** are true, it activates protection. When either becomes false, it
+releases everything and restores your original settings. So protection is only
+ever on while you actually have an agent task running.
 
 ## Requirements
 
@@ -35,81 +48,15 @@ in the first place.
    Get-ChildItem -Path . -Recurse | Unblock-File
    ```
 
-3. From the project folder, start the guard:
+3. From the project folder, start it:
 
    ```powershell
    .\LidLess.ps1 start
    ```
 
-To stop and fully restore your power settings, run `.\LidLess.ps1 stop`.
-
-## What It Changes While Protected
-
-When a matching process is running and the current power source is enabled in
-`config.json`, LidLess can:
-
-- Set lid close action to `Do nothing`.
-- Set idle sleep timeout to `0` (`Never`).
-- Set idle hibernate timeout to `0` (`Never`).
-- Hold a Windows `PowerRequestSystemRequired` request.
-- Hold a Windows `PowerRequestExecutionRequired` request.
-
-The lid close setting is the mechanism that stops a closed laptop from entering
-standby. Power requests only supplement idle-sleep protection; they do not
-override a lid-close sleep action on their own.
-
-When no matching process is running, or the service is stopped, it releases the
-power requests and restores the power settings it changed.
-
-## Files
-
-- `LidLess.ps1` - command entrypoint.
-- `config.json` - process and AC/DC protection policy.
-- `src/` - implementation modules.
-- `state/state.json` - runtime state, created while protection is active.
-- `logs/LidLess.log` - runtime log, created on demand.
-
-## Configuration
-
-Edit `config.json`:
-
-```json
-{
-  "processNames": ["claude", "codex", "Codex Desktop"],
-  "pollSeconds": 5,
-  "ac": {
-    "enabled": true,
-    "lidCloseDoNothing": true,
-    "preventIdleSleep": true,
-    "preventHibernate": true,
-    "holdSystemRequiredRequest": true,
-    "holdExecutionRequiredRequest": true
-  },
-  "dc": {
-    "enabled": false,
-    "lidCloseDoNothing": true,
-    "preventIdleSleep": true,
-    "preventHibernate": false,
-    "holdSystemRequiredRequest": true,
-    "holdExecutionRequiredRequest": true
-  },
-  "diagnostics": {
-    "includeRecentPowerEvents": true,
-    "eventLookbackHours": 12
-  }
-}
-```
-
-`processNames` are PowerShell process names without `.exe`. Matching is
-case-insensitive, duplicates are ignored, and wildcards accepted by
-`Get-Process -Name` also work.
-
-Long-lived GUI shells such as VS Code or ChatGPT Desktop are intentionally not
-part of the default list because they are often open all day. Add them only if
-their presence should keep the machine awake.
-
-The default is conservative: AC is fully protected, DC is disabled to avoid
-battery drain.
+That registers and starts the background task. You can close the lid while a
+configured agent runs. To stop and fully restore your power settings later, run
+`.\LidLess.ps1 stop`.
 
 ## Commands
 
@@ -130,18 +77,14 @@ If local execution policy blocks direct script execution, use:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\LidLess.ps1 status
 ```
 
-Commands:
-
-- `status` prints current task, source, policy, matching processes, and runtime
-  state.
-- `doctor` prints status plus sleep-state, `powercfg /requests`, power event,
-  and WLAN event diagnostics.
-- `start` registers and starts a hidden SYSTEM scheduled task named
-  `LidLess`.
-- `stop` stops and unregisters the scheduled task, releases power requests, and
-  restores touched settings.
-- `run` runs the monitor loop in the foreground for debugging.
-- `once` applies one protection tick, then prints status.
+| Command  | What it does |
+|----------|--------------|
+| `status` | Prints current task, power source, policy values, matching processes, and runtime state. Read-only. |
+| `doctor` | Prints `status` plus available sleep states, `powercfg /requests`, and recent power/WLAN events for diagnostics. |
+| `start`  | Registers and starts a hidden `SYSTEM` scheduled task named `LidLess`. |
+| `stop`   | Stops and unregisters the task, releases power requests, and restores every setting it changed. |
+| `run`    | Runs the monitor loop in the foreground (for debugging). |
+| `once`   | Applies a single protection tick, then prints status. |
 
 `start`, `stop`, `run`, and `once` request administrator elevation when needed.
 For foreground debugging with `run` or `once`, open an elevated PowerShell first
@@ -170,6 +113,119 @@ LidLess status
   Runtime power request: handle=True, system=True, execution=True
 ```
 
+## Configuration
+
+Settings live in `config.json` (created with defaults on first run). Edit it,
+then restart with `.\LidLess.ps1 start` to apply.
+
+```json
+{
+  "processNames": ["claude", "codex", "Codex Desktop"],
+  "pollSeconds": 5,
+  "ac": {
+    "enabled": true,
+    "lidCloseDoNothing": true,
+    "preventIdleSleep": true,
+    "preventHibernate": true,
+    "holdSystemRequiredRequest": true,
+    "holdExecutionRequiredRequest": true
+  },
+  "dc": {
+    "enabled": false,
+    "lidCloseDoNothing": true,
+    "preventIdleSleep": true,
+    "preventHibernate": false,
+    "holdSystemRequiredRequest": true,
+    "holdExecutionRequiredRequest": true
+  },
+  "diagnostics": {
+    "includeRecentPowerEvents": true,
+    "eventLookbackHours": 12
+  }
+}
+```
+
+### Field reference
+
+| Field | Meaning |
+|-------|---------|
+| `processNames` | Process names to watch, without `.exe`. Matching is case-insensitive, duplicates are ignored, and wildcards accepted by `Get-Process -Name` work. |
+| `pollSeconds` | How often the monitor re-checks state. Minimum `2`. |
+| `ac` / `dc` | Separate policy for when the laptop is on AC power vs. on battery (DC). |
+| `*.enabled` | Whether protection runs at all on that power source. |
+| `*.lidCloseDoNothing` | Set the lid-close action to `Do nothing` (this is what actually prevents closed-lid sleep). |
+| `*.preventIdleSleep` | Set "sleep after" to `Never`. |
+| `*.preventHibernate` | Set "hibernate after" to `Never`. |
+| `*.holdSystemRequiredRequest` | Hold a Windows `PowerRequestSystemRequired` request (supplements idle-sleep prevention). |
+| `*.holdExecutionRequiredRequest` | Hold a Windows `PowerRequestExecutionRequired` request. |
+| `diagnostics.includeRecentPowerEvents` | Whether `doctor` includes recent Kernel-Power events. |
+| `diagnostics.eventLookbackHours` | How far back `doctor` looks for power/WLAN events. |
+
+The lid-close action is the mechanism that stops a closed laptop from entering
+standby. The power requests only supplement idle-sleep prevention; they do not
+override a lid-close sleep action on their own.
+
+Long-lived GUI shells such as VS Code or ChatGPT Desktop are intentionally not
+in the default list because they are often open all day, which would keep the
+machine awake long after any task finished. Add them only if you want their mere
+presence to count.
+
+The default is conservative: AC is fully protected, DC is disabled to avoid
+battery drain.
+
+## Uninstall
+
+```powershell
+.\LidLess.ps1 stop
+```
+
+`stop` removes the scheduled task, releases the power requests, and restores
+every setting LidLess changed. After that you can simply delete the folder. The
+only things left behind are the local `state/` and `logs/` folders, which you
+can delete too.
+
+## Troubleshooting
+
+- **"running scripts is disabled on this system".** Unblock the files
+  (`Get-ChildItem -Recurse | Unblock-File`) or use the
+  `-ExecutionPolicy Bypass` invocation shown above.
+- **The lid still sleeps the machine.** Run `.\LidLess.ps1 doctor`. Confirm the
+  matching process appears under `Matches`, that the current power source is
+  `enabled` in `config.json`, and that `AC lid` (or `DC lid`) reads
+  `0 (Do nothing)`. Note that some OEM firmware can force sleep regardless of
+  Windows policy; `doctor`'s power events help confirm what triggered it.
+- **The task is not running.** `status` shows the task state. Re-run
+  `.\LidLess.ps1 start` from an elevated prompt and check
+  `logs\LidLess.log`.
+- **Protection seems stuck on after a crash.** If the monitor was killed,
+  `powercfg` settings persist until reconciled. `status` warns when a protected
+  state remains while the task is not running; run `start` (reconciles and
+  restarts) or `stop` (restores) to fix it.
+- **My process is not detected.** Use the process name without `.exe` as shown
+  by `Get-Process`. Confirm it under `status` -> `Matches`.
+
+## How it runs in the background
+
+The monitor is a Windows Scheduled Task running as `SYSTEM` at startup. This
+gives service-like behavior without a service wrapper or a compiled Windows
+Service, and it survives reboot: after a restart the task starts again and
+reconciles state. The task is also configured to restart the monitor after a
+process failure, and the monitor exits on repeated tick failures so the task can
+restart it cleanly.
+
+Each tick writes a heartbeat to `state/state.json`, which `status` reports.
+
+## Restore safety
+
+LidLess snapshots the original value of every setting before it changes it, and
+marks the setting as owned. On restore it reverts only settings it still owns and
+that still hold the value it set — so a change you make manually while the guard
+is active is not clobbered. State is written atomically and repaired into the
+current shape on read, so older or partial state files load without error.
+
+Stopping the service is intended to leave Windows as if the guard had never run,
+except for retained logs.
+
 ## Tests
 
 Run the no-dependency test script:
@@ -177,33 +233,6 @@ Run the no-dependency test script:
 ```powershell
 .\tests\run-tests.ps1
 ```
-
-## Why Scheduled Task Instead Of services.msc
-
-The service runner is a Windows Scheduled Task running as `SYSTEM` at startup.
-This gives service-like behavior without a service wrapper or a compiled Windows
-Service. It also survives reboot: after an unexpected restart, the task starts
-again and reconciles state.
-
-## Restore Safety
-
-LidLess snapshots the original values for every active power scheme it
-touches. It restores only settings it actually changed. If a setting is changed
-manually while the guard is active, restore skips values that no longer look
-service-owned.
-
-The scheduled task is configured to restart the monitor after process failure.
-Each monitor tick writes a heartbeat to `state/state.json`; `status` reports the
-last heartbeat and warns if a protected state remains while the task is not
-running. Running `start` again first reconciles and removes any residual state
-before registering the task.
-
-If `powercfg` hangs, LidLess times it out rather than letting the monitor
-tick block forever. After five consecutive tick failures, the monitor exits with
-a non-zero status so the scheduled task can restart it.
-
-Stopping the service is intended to leave Windows as if the guard had not been
-running, except for retained logs.
 
 ## Documentation
 
@@ -214,9 +243,8 @@ running, except for retained logs.
 
 ## Contributing
 
-Contributions are welcome. Please read
-[CONTRIBUTING.md](CONTRIBUTING.md) and run `.\tests\run-tests.ps1` before
-opening a pull request.
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and run
+`.\tests\run-tests.ps1` before opening a pull request.
 
 ## License
 

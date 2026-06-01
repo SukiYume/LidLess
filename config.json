@@ -1,8 +1,7 @@
 {
   "processNames": [
     "claude",
-    "codex",
-    "Codex Desktop"
+    "codex"
   ],
   "pollSeconds": 5,
   "ac": {
