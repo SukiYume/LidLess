@@ -53,27 +53,91 @@ far:
 
 ## Install
 
-1. Download or clone this repository.
-2. If you downloaded it from the internet, unblock the files so PowerShell will
-   run them (Windows marks downloaded scripts as blocked):
+Open PowerShell as Administrator, then paste this whole block and press Enter:
 
-   ```powershell
-   Get-ChildItem -Path . -Recurse | Unblock-File
-   ```
+```powershell
+$ErrorActionPreference = "Stop"
 
-3. Move the folder to an administrator-writable location, for example
-   `%ProgramFiles%\LidLess`.
-4. From the installed folder, start it:
+$principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    throw "Open PowerShell as Administrator, then run this block again."
+}
 
-   ```powershell
-   .\LidLess.ps1 start
-   ```
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+$repo = "SukiYume/LidLess"
+$installDir = Join-Path $env:ProgramFiles "LidLess"
+$tempRoot = Join-Path $env:TEMP ("LidLess-install-" + [guid]::NewGuid())
+$zipPath = Join-Path $tempRoot "LidLess.zip"
+$extractDir = Join-Path $tempRoot "extract"
+
+New-Item -ItemType Directory -Path $tempRoot, $extractDir -Force | Out-Null
+
+try {
+    $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest"
+    $asset = $release.assets | Where-Object { $_.name -match '^LidLess-v.+\.zip$' } | Select-Object -First 1
+    if (-not $asset) {
+        throw "No LidLess release zip was found in the latest GitHub release."
+    }
+
+    Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zipPath
+    Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
+
+    $packageDir = Get-ChildItem -Path $extractDir -Directory | Select-Object -First 1
+    if (-not $packageDir) {
+        throw "The downloaded zip did not contain a LidLess folder."
+    }
+
+    $configPath = Join-Path $installDir "config.json"
+    $configBackup = Join-Path $tempRoot "config.json"
+    $hasConfig = Test-Path $configPath
+    if ($hasConfig) {
+        Copy-Item -LiteralPath $configPath -Destination $configBackup -Force
+    }
+
+    $oldScript = Join-Path $installDir "LidLess.ps1"
+    if (Test-Path $oldScript) {
+        & $oldScript stop
+    }
+
+    Remove-Item -LiteralPath $installDir -Recurse -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Path $installDir -Force | Out-Null
+    Copy-Item -Path (Join-Path $packageDir.FullName "*") -Destination $installDir -Recurse -Force
+
+    if ($hasConfig) {
+        Copy-Item -LiteralPath $configBackup -Destination $configPath -Force
+    }
+
+    Get-ChildItem -Path $installDir -Recurse | Unblock-File
+    Set-Location $installDir
+
+    .\LidLess.ps1 start
+    .\LidLess.ps1 status
+}
+finally {
+    Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
+```
+
+To change the watched processes after installation, paste this:
+
+```powershell
+notepad "$env:ProgramFiles\LidLess\config.json"
+cd "$env:ProgramFiles\LidLess"
+.\LidLess.ps1 start
+.\LidLess.ps1 status
+```
 
 `start` refuses to register the `SYSTEM` task if the script or `src\` modules
 are writable by a normal user. That registers and starts the background task.
 You can close the lid while a
 configured agent runs. To stop and fully restore your power settings later, run
-`.\LidLess.ps1 stop`.
+this from an elevated PowerShell:
+
+```powershell
+cd "$env:ProgramFiles\LidLess"
+.\LidLess.ps1 stop
+```
 
 ## Commands
 
