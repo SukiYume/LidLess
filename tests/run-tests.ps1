@@ -292,8 +292,20 @@ Invoke-LLTest "User-writable install path is rejected for SYSTEM task registrati
     $tempDir = Join-Path $env:TEMP ("ll-test-" + [guid]::NewGuid())
     New-Item -ItemType Directory -Path $tempDir | Out-Null
     try {
+        $acl = Get-Acl -Path $tempDir
+        $everyone = New-Object Security.Principal.SecurityIdentifier("S-1-1-0")
+        $rule = New-Object Security.AccessControl.FileSystemAccessRule(
+            $everyone,
+            [Security.AccessControl.FileSystemRights]::Modify,
+            [Security.AccessControl.InheritanceFlags]"ContainerInherit,ObjectInherit",
+            [Security.AccessControl.PropagationFlags]::None,
+            [Security.AccessControl.AccessControlType]::Allow
+        )
+        $acl.SetAccessRule($rule)
+        Set-Acl -Path $tempDir -AclObject $acl
+
         $findingCount = & $RuntimeModule { param($Path) @(Get-LLUnsafeInstallPathAccess -ScriptRoot $Path).Count } $tempDir
-        Assert-LLTrue ($findingCount -gt 0) "User-writable temp directory should be reported as unsafe for SYSTEM task registration."
+        Assert-LLTrue ($findingCount -gt 0) "Explicit Everyone write access should be reported as unsafe for SYSTEM task registration."
     }
     finally {
         Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
