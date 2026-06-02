@@ -103,7 +103,7 @@ function Get-LLRecentPowerEvents {
         Where-Object { $_.ProviderName -eq "Microsoft-Windows-Kernel-Power" -and $_.Id -in $ids } |
         Sort-Object TimeCreated -Descending |
         Select-Object -First 20 |
-        ForEach-Object { Convert-LLEventSummary -Event $_ })
+        ForEach-Object { Convert-LLEventSummary -Record $_ })
 }
 
 function Get-LLRecentWlanEvents {
@@ -114,7 +114,7 @@ function Get-LLRecentWlanEvents {
         Where-Object { $_.Id -in 8000, 8001, 8002, 8003, 11000, 11001, 11004, 11005 } |
         Sort-Object TimeCreated -Descending |
         Select-Object -First 20 |
-        ForEach-Object { Convert-LLEventSummary -Event $_ })
+        ForEach-Object { Convert-LLEventSummary -Record $_ })
 }
 
 Export-ModuleMember -Function Write-LLStatus, Get-LLSleepStates, Get-LLPowerRequestsText, Get-LLRecentPowerEvents, Get-LLRecentWlanEvents

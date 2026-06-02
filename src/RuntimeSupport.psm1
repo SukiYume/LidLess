@@ -35,7 +35,9 @@ function Write-LLLog {
         }
 
         if ((Test-Path $LogPath) -and ((Get-Item $LogPath).Length -gt 1MB)) {
-            Clear-Content -Path $LogPath -ErrorAction SilentlyContinue
+            $archivePath = "$LogPath.1"
+            Remove-Item -Path $archivePath -Force -ErrorAction SilentlyContinue
+            Move-Item -Path $LogPath -Destination $archivePath -Force -ErrorAction SilentlyContinue
         }
 
         $line = "{0} {1}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $Message

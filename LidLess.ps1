@@ -83,6 +83,31 @@ function Set-RuntimeState {
         -PowerRequestState (Get-LLPowerRequestState)
 }
 
+function Test-RuntimeLogChange {
+    param(
+        $State,
+        [bool]$Protected,
+        [string]$PowerSource,
+        [string]$Reason
+    )
+
+    if ($null -eq $State -or $null -eq $State.Runtime) {
+        return $true
+    }
+
+    if ([bool]$State.Runtime.Protected -ne $Protected) {
+        return $true
+    }
+    if ([string]$State.Runtime.PowerSource -ne $PowerSource) {
+        return $true
+    }
+    if ([string]$State.Runtime.Reason -ne $Reason) {
+        return $true
+    }
+
+    return $false
+}
+
 function Restore-AllProtection {
     param(
         [switch]$RemoveStateFile,
@@ -91,7 +116,10 @@ function Restore-AllProtection {
 
     Clear-LLPowerRequest
     $state = Read-LLState -StatePath $Context.StatePath
-    Restore-LLPolicyProtection -State $state | Out-Null
+    $restored = Restore-LLPolicyProtection -State $state
+    if ($restored) {
+        Write-LLLog -LogPath $Context.LogPath -Message "Policy protection restored. Reason=$Reason"
+    }
     Set-RuntimeState -State $state -Protected $false -PowerSource (Get-LLPowerSource) -MatchedProcesses @() -Reason $Reason
 
     if ($RemoveStateFile) {
@@ -109,6 +137,9 @@ function Invoke-MonitorTick {
     $currentSourceEnabled = [bool]$inputs.SourceConfig.Enabled
 
     if ($hasMatches -and $currentSourceEnabled) {
+        $runtimeReason = "matched process and source enabled"
+        $shouldLog = Test-RuntimeLogChange -State $state -Protected $true -PowerSource $inputs.PowerSource -Reason $runtimeReason
+
         Enable-LLPolicyProtection `
             -State $state `
             -Config $inputs.Config `
@@ -126,17 +157,19 @@ function Invoke-MonitorTick {
             -Protected $true `
             -PowerSource $inputs.PowerSource `
             -MatchedProcesses $inputs.Matches `
-            -Reason "matched process and source enabled"
+            -Reason $runtimeReason
 
         Save-LLState -StatePath $Context.StatePath -State $state
 
-        $names = @($inputs.Matches | ForEach-Object { Format-LLProcessMatch -Process $_ }) -join ", "
-        Write-LLLog -LogPath $Context.LogPath -Message "Protected active. Source=$($inputs.PowerSource), Matches=$names"
+        if ($shouldLog) {
+            $names = @($inputs.Matches | ForEach-Object { Format-LLProcessMatch -Process $_ }) -join ", "
+            Write-LLLog -LogPath $Context.LogPath -Message "Protected active. Source=$($inputs.PowerSource), Matches=$names"
+        }
         return
     }
 
     Clear-LLPowerRequest
-    Restore-LLPolicyProtection -State $state | Out-Null
+    $restored = Restore-LLPolicyProtection -State $state
 
     $reason = if ($hasMatches) {
         "matched process but current source $($inputs.PowerSource) is disabled"
@@ -144,6 +177,8 @@ function Invoke-MonitorTick {
     else {
         "no matched process"
     }
+
+    $shouldLog = Test-RuntimeLogChange -State $state -Protected $false -PowerSource $inputs.PowerSource -Reason $reason
 
     Set-RuntimeState `
         -State $state `
@@ -153,7 +188,12 @@ function Invoke-MonitorTick {
         -Reason $reason
 
     Save-LLState -StatePath $Context.StatePath -State $state
-    Write-LLLog -LogPath $Context.LogPath -Message "Protection inactive. Reason=$reason"
+    if ($restored) {
+        Write-LLLog -LogPath $Context.LogPath -Message "Policy protection restored. Reason=$reason"
+    }
+    if ($shouldLog) {
+        Write-LLLog -LogPath $Context.LogPath -Message "Protection inactive. Reason=$reason"
+    }
 }
 
 function Start-MonitorLoop {
@@ -192,6 +232,8 @@ function Start-LidLess {
     Ensure-LLAdmin -ScriptPath $Context.ScriptPath -Command "start"
     $config = Get-LLConfig -ConfigPath $Context.ConfigPath
     $previousTaskState = Get-LLTaskState -TaskName $Context.TaskName
+
+    Stop-LLTask -TaskName $Context.TaskName
 
     if (Test-Path $Context.StatePath) {
         Restore-AllProtection -RemoveStateFile -Reason "start cleanup"

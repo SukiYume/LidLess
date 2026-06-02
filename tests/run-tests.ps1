@@ -6,6 +6,7 @@ $RepoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 Import-Module (Join-Path $RepoRoot "src\RuntimeSupport.psm1") -Force -DisableNameChecking
 Import-Module (Join-Path $RepoRoot "src\Config.psm1") -Force -DisableNameChecking
 Import-Module (Join-Path $RepoRoot "src\StateStore.psm1") -Force -DisableNameChecking
+$DiagnosticsModule = Import-Module (Join-Path $RepoRoot "src\Diagnostics.psm1") -Force -DisableNameChecking -PassThru
 
 $script:Passed = 0
 
@@ -60,6 +61,18 @@ Invoke-LLTest "PowerShell files parse" {
 Invoke-LLTest "Default config focuses on task-like agent processes" {
     $config = New-LLDefaultConfig
     Assert-LLEqual "claude,codex" ($config.ProcessNames -join ",") "Unexpected default process names."
+}
+
+Invoke-LLTest "Diagnostic event summaries normalize event records" {
+    $record = [pscustomobject]@{
+        TimeCreated = [datetime]"2026-06-02T10:17:00"
+        Id = 507
+        Message = "Line one`r`n  Line two"
+    }
+
+    $summary = & $DiagnosticsModule { param($EventRecord) Convert-LLEventSummary -Record $EventRecord } $record
+    Assert-LLEqual 507 $summary.Id "Unexpected event id."
+    Assert-LLEqual "Line one Line two" $summary.Summary "Event summary was not normalized."
 }
 
 Invoke-LLTest "Config normalizes exe suffix and de-duplicates case-insensitively" {

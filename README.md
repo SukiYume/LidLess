@@ -116,7 +116,7 @@ LidLess status
 ## Configuration
 
 Settings live in `config.json` (created with defaults on first run). Edit it,
-then restart with `.\LidLess.ps1 start` to apply.
+then rerun `.\LidLess.ps1 start` to apply.
 
 ```json
 {
@@ -214,8 +214,8 @@ can delete too.
   registration time.
 - **Protection seems stuck on after a crash.** If the monitor was killed,
   `powercfg` settings persist until reconciled. `status` warns when a protected
-  state remains while the task is not running; run `start` (reconciles and
-  restarts) or `stop` (restores) to fix it.
+  state remains while the task is not running; run `start` to reconcile and
+  start the task again, or `stop` to restore settings.
 - **My process is not detected.** Use the process name without `.exe` as shown
   by `Get-Process`. Confirm it under `status` -> `Matches`.
 
