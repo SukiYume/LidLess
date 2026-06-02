@@ -75,6 +75,54 @@ Invoke-LLTest "Diagnostic event summaries normalize event records" {
     Assert-LLEqual "Line one Line two" $summary.Summary "Event summary was not normalized."
 }
 
+Invoke-LLTest "Status explains access-limited scheduled task state" {
+    $snapshot = [pscustomobject]@{
+        AC = [pscustomobject]@{
+            LidAction = 0
+            StandbyIdle = 0
+            HibernateIdle = 0
+        }
+        DC = [pscustomobject]@{
+            LidAction = 1
+            StandbyIdle = 1800
+            HibernateIdle = 1800
+        }
+    }
+    $config = [pscustomobject]@{
+        PollSeconds = 5
+        ProcessNames = @("codex")
+    }
+    $state = [pscustomobject]@{
+        Runtime = [pscustomobject]@{
+            Protected = $true
+            Reason = "matched process and source enabled"
+            LastHeartbeatAt = "2026-06-02T13:00:00+08:00"
+            MonitorProcessId = 1234
+            PowerRequest = [pscustomobject]@{
+                HasHandle = $true
+                SystemRequired = $true
+                ExecutionRequired = $true
+            }
+        }
+    }
+
+    $output = & {
+        Write-LLStatus `
+            -TaskName "LidLess" `
+            -TaskState "Access denied" `
+            -PowerSource "AC" `
+            -SourceConfig ([pscustomobject]@{ Enabled = $true }) `
+            -SchemeGuid "381b4222-f694-41f0-9685-ff5bb260df2e" `
+            -Snapshot $snapshot `
+            -Config $config `
+            -MatchedProcesses @() `
+            -State $state
+    } 6>&1 | Out-String
+
+    Assert-LLTrue ($output -match "Shell elevated:\s+(True|False)") "Status did not print shell elevation state."
+    Assert-LLTrue ($output -match "exact scheduled-task state requires an elevated shell") "Status did not explain access-limited task state."
+}
+
 Invoke-LLTest "Config normalizes exe suffix and de-duplicates case-insensitively" {
     $tempDir = Join-Path $env:TEMP ("alg-test-" + [guid]::NewGuid())
     New-Item -ItemType Directory -Path $tempDir | Out-Null

@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- `status` now shows whether the current shell is elevated and explains when
+  `Access denied` only means the exact `SYSTEM` task state is hidden.
+- `doctor` now labels non-elevated `powercfg /requests` output as an elevation
+  requirement instead of a generic unavailable command.
+
 ## [1.0.2] - 2026-06-02
 
 ### Fixed

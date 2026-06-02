@@ -1,5 +1,17 @@
 Set-StrictMode -Version 2.0
 
+function Test-LLAccessDeniedText {
+    param([string]$Text)
+
+    return ($Text -match 'Access is denied|Access denied|\u62d2\u7edd\u8bbf\u95ee|\u5b58\u53d6\u88ab\u62d2')
+}
+
+function Test-LLTaskNotFoundText {
+    param([string]$Text)
+
+    return ($Text -match 'cannot find|not exist|No .* found|\u627e\u4e0d\u5230|\u4e0d\u5b58\u5728')
+}
+
 function Get-LLTaskState {
     param([string]$TaskName)
 
@@ -11,7 +23,7 @@ function Get-LLTaskState {
     }
     catch {
         $message = $_.Exception.Message
-        if ($message -match "Access is denied") {
+        if (Test-LLAccessDeniedText -Text $message) {
             return "Access denied"
         }
     }
@@ -28,10 +40,10 @@ function Get-LLTaskState {
 
     if ($exitCode -ne 0) {
         $text = ($output | ForEach-Object { $_.ToString() } | Out-String)
-        if ($text -match "Access is denied") {
+        if (Test-LLAccessDeniedText -Text $text) {
             return "Access denied"
         }
-        if ($text -match "cannot find|not exist") {
+        if (Test-LLTaskNotFoundText -Text $text) {
             return "Not installed"
         }
 

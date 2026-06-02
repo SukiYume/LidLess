@@ -90,6 +90,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\LidLess.ps1 status
 For foreground debugging with `run` or `once`, open an elevated PowerShell first
 so output stays in the same terminal.
 
+`status` and `doctor` are read-only and can run without elevation. In a
+non-elevated shell, Windows may hide the exact state of the `SYSTEM` scheduled
+task and may block `powercfg /requests`; the commands still show policy values,
+matched processes, runtime heartbeat, and recent events. Re-run them elevated
+when you need the protected task state or full `powercfg /requests` output.
+
 ### Example `status` output
 
 ```text
@@ -207,7 +213,8 @@ can delete too.
 - **The task is not running.** `status` shows the task state. Re-run
   `.\LidLess.ps1 start` from an elevated prompt and check
   `logs\LidLess.log`. If `status` shows `Access denied`, re-run `status` from
-  an elevated prompt to see the exact task state.
+  an elevated prompt to see the exact task state; the runtime heartbeat is still
+  useful in a non-elevated shell.
 - **I moved the folder after starting LidLess.** Run `.\LidLess.ps1 stop` from
   the old location first if it still exists, then run `.\LidLess.ps1 start`
   from the new location. The scheduled task stores the script path used at

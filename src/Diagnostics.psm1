@@ -1,5 +1,14 @@
 Set-StrictMode -Version 2.0
 
+function Test-LLDiagnosticShellElevated {
+    $command = Get-Command Test-LLIsAdmin -ErrorAction SilentlyContinue
+    if ($command) {
+        return [bool](Test-LLIsAdmin)
+    }
+
+    return $false
+}
+
 function Format-LLLidAction {
     param([int]$Value)
 
@@ -25,8 +34,14 @@ function Write-LLStatus {
         $State
     )
 
+    $isElevated = Test-LLDiagnosticShellElevated
+
     Write-Host "LidLess status"
     Write-Host "  Task:                 $TaskName ($TaskState)"
+    Write-Host "  Shell elevated:       $isElevated"
+    if ($TaskState -eq "Access denied") {
+        Write-Host "  Task note:            exact scheduled-task state requires an elevated shell; runtime heartbeat is still shown below."
+    }
     Write-Host "  Power source:         $PowerSource"
     Write-Host "  Source enabled:       $($SourceConfig.Enabled)"
     Write-Host "  Active scheme:        $SchemeGuid"
@@ -66,10 +81,15 @@ function Get-LLSleepStates {
 function Get-LLPowerRequestsText {
     try {
         $output = & powercfg /requests 2>&1
-        return @($output | Where-Object { $_ -ne "" })
+        $lines = @($output | ForEach-Object { $_.ToString() } | Where-Object { $_ -ne "" })
+        if ($LASTEXITCODE -ne 0) {
+            return @("powercfg /requests requires an elevated shell for full output: $($lines -join ' ')")
+        }
+
+        return $lines
     }
     catch {
-        return @("powercfg /requests unavailable in this shell: $($_.Exception.Message)")
+        return @("powercfg /requests requires an elevated shell for full output: $($_.Exception.Message)")
     }
 }
 

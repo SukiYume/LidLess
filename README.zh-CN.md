@@ -83,6 +83,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\LidLess.ps1 status
 `start`、`stop`、`run`、`once` 会在需要时请求管理员提权。若要用 `run` 或 `once`
 做前台调试，先打开一个已提权的 PowerShell，输出才会留在同一个终端里。
 
+`status` 和 `doctor` 是只读命令，不提权也能运行。但在非管理员终端里，Windows
+可能隐藏 `SYSTEM` 计划任务的准确状态，也可能阻止 `powercfg /requests`；命令仍会
+显示电源策略、匹配进程、运行时心跳和近期事件。需要查看受保护任务状态或完整
+`powercfg /requests` 时，再用已提权终端运行。
+
 ### `status` 输出示例
 
 ```text
@@ -192,7 +197,8 @@ VS Code、ChatGPT Desktop 这类常驻 GUI 默认**不**在列表里，因为它
   `doctor` 里的电源事件有助于判断是什么触发的。
 - **任务没在运行。** `status` 会显示任务状态。在已提权的终端重新运行
   `.\LidLess.ps1 start`，并查看 `logs\LidLess.log`。如果 `status` 显示
-  `Access denied`，请在已提权的终端里重新运行 `status` 查看准确任务状态。
+  `Access denied`，请在已提权的终端里重新运行 `status` 查看准确任务状态；非管理员
+  终端里的运行时心跳仍然有参考价值。
 - **启动后移动了文件夹。** 如果旧路径还在，先在旧路径运行 `.\LidLess.ps1 stop`，
   再到新路径运行 `.\LidLess.ps1 start`。计划任务注册时会保存脚本路径。
 - **崩溃后保护好像卡住了。** 如果监控进程被强杀，`powercfg` 的改动会一直保留直到
