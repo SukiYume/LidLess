@@ -58,14 +58,17 @@ function Test-LLWaitForElevatedCommand {
 function Test-LLFileSystemRightsIncludeWrite {
     param([Security.AccessControl.FileSystemRights]$Rights)
 
+    # Use atomic write/control bits only. Composite values such as Write, Modify,
+    # and FullControl overlap with read/execute flags and can make a read-only
+    # ACL entry look writable.
     $writeRights =
-        [Security.AccessControl.FileSystemRights]::Write -bor
         [Security.AccessControl.FileSystemRights]::WriteData -bor
         [Security.AccessControl.FileSystemRights]::AppendData -bor
         [Security.AccessControl.FileSystemRights]::CreateFiles -bor
         [Security.AccessControl.FileSystemRights]::CreateDirectories -bor
-        [Security.AccessControl.FileSystemRights]::Modify -bor
-        [Security.AccessControl.FileSystemRights]::FullControl -bor
+        [Security.AccessControl.FileSystemRights]::WriteExtendedAttributes -bor
+        [Security.AccessControl.FileSystemRights]::WriteAttributes -bor
+        [Security.AccessControl.FileSystemRights]::DeleteSubdirectoriesAndFiles -bor
         [Security.AccessControl.FileSystemRights]::ChangePermissions -bor
         [Security.AccessControl.FileSystemRights]::TakeOwnership -bor
         [Security.AccessControl.FileSystemRights]::Delete

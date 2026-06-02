@@ -288,6 +288,23 @@ Invoke-LLTest "Built-in Administrator SID is not treated as unsafe writer" {
     Assert-LLTrue $everyoneUnsafe "Everyone should be treated as unsafe when it has write access."
 }
 
+Invoke-LLTest "Read-only install ACL rights are not treated as writable" {
+    $readOnlyRights =
+        [Security.AccessControl.FileSystemRights]::ReadAndExecute -bor
+        [Security.AccessControl.FileSystemRights]::Synchronize
+    $readOnlyIsWrite = & $RuntimeModule {
+        param($Rights)
+        Test-LLFileSystemRightsIncludeWrite -Rights $Rights
+    } $readOnlyRights
+    $modifyIsWrite = & $RuntimeModule {
+        param($Rights)
+        Test-LLFileSystemRightsIncludeWrite -Rights $Rights
+    } ([Security.AccessControl.FileSystemRights]::Modify)
+
+    Assert-LLEqual $false $readOnlyIsWrite "ReadAndExecute/Synchronize should not be treated as write access."
+    Assert-LLTrue $modifyIsWrite "Modify should still be treated as write access."
+}
+
 Invoke-LLTest "User-writable install path is rejected for SYSTEM task registration" {
     $tempDir = Join-Path $env:TEMP ("ll-test-" + [guid]::NewGuid())
     New-Item -ItemType Directory -Path $tempDir | Out-Null
