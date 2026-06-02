@@ -10,6 +10,11 @@ touches:
   that runs the monitor loop as the `SYSTEM` account at startup with the highest
   run level. This is required to read/write power policy and hold power requests
   reliably regardless of which user is logged on.
+- **Requires a trusted install folder.** Because the scheduled task executes
+  `LidLess.ps1` and imports `src\*.psm1` as `SYSTEM`, those files must not be
+  writable by a normal user. `start` checks the install ACL and refuses to
+  register the task from user-writable locations such as Desktop or Downloads.
+  Install to an administrator-writable directory such as `%ProgramFiles%\LidLess`.
 - **Requires administrator elevation.** `start`, `stop`, `run`, and `once`
   self-elevate via UAC when not already elevated.
 - **Changes power policy.** While a configured process is running and the

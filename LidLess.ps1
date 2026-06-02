@@ -49,7 +49,9 @@ $Context = [pscustomobject]@{
 }
 
 function Get-CurrentInputs {
-    $config = Get-LLConfig -ConfigPath $Context.ConfigPath
+    param($Config)
+
+    $config = if ($null -ne $Config) { $Config } else { Get-LLConfig -ConfigPath $Context.ConfigPath }
     $powerSource = Get-LLPowerSource
     $sourceConfig = Get-LLSourceConfig -Config $config -PowerSource $powerSource
     $matchedProcesses = Get-LLMatchingProcesses -ProcessNames $config.ProcessNames
@@ -131,7 +133,9 @@ function Restore-AllProtection {
 }
 
 function Invoke-MonitorTick {
-    $inputs = Get-CurrentInputs
+    param($Config)
+
+    $inputs = Get-CurrentInputs -Config $Config
     $state = Read-LLState -StatePath $Context.StatePath
     $hasMatches = @($inputs.Matches).Count -gt 0
     $currentSourceEnabled = [bool]$inputs.SourceConfig.Enabled
@@ -206,7 +210,7 @@ function Start-MonitorLoop {
     while ($true) {
         try {
             $config = Get-LLConfig -ConfigPath $Context.ConfigPath
-            Invoke-MonitorTick
+            Invoke-MonitorTick -Config $config
             $consecutiveFailures = 0
             Start-Sleep -Seconds $config.PollSeconds
         }
@@ -230,6 +234,7 @@ function Start-MonitorLoop {
 
 function Start-LidLess {
     Ensure-LLAdmin -ScriptPath $Context.ScriptPath -Command "start"
+    Assert-LLTrustedInstallPath -ScriptRoot $Context.ScriptRoot
     $config = Get-LLConfig -ConfigPath $Context.ConfigPath
     $previousTaskState = Get-LLTaskState -TaskName $Context.TaskName
 
@@ -280,6 +285,14 @@ function Show-Status {
         -State $state
 }
 
+function Write-LLEventLines {
+    param($Events)
+
+    foreach ($record in @($Events)) {
+        Write-Host ("    {0:yyyy-MM-dd HH:mm:ss} [{1}] {2}" -f $record.TimeCreated, $record.Id, $record.Summary)
+    }
+}
+
 function Show-Doctor {
     Show-Status
     $config = Get-LLConfig -ConfigPath $Context.ConfigPath
@@ -293,15 +306,11 @@ function Show-Doctor {
     if ([bool]$config.Diagnostics.IncludeRecentPowerEvents) {
         Write-Host ""
         Write-Host "  Recent power events:"
-        Get-LLRecentPowerEvents -Hours $config.Diagnostics.EventLookbackHours | ForEach-Object {
-            Write-Host ("    {0:yyyy-MM-dd HH:mm:ss} [{1}] {2}" -f $_.TimeCreated, $_.Id, $_.Summary)
-        }
+        Write-LLEventLines -Events (Get-LLRecentPowerEvents -Hours $config.Diagnostics.EventLookbackHours)
     }
     Write-Host ""
     Write-Host "  Recent WLAN events:"
-    Get-LLRecentWlanEvents -Hours $config.Diagnostics.EventLookbackHours | ForEach-Object {
-        Write-Host ("    {0:yyyy-MM-dd HH:mm:ss} [{1}] {2}" -f $_.TimeCreated, $_.Id, $_.Summary)
-    }
+    Write-LLEventLines -Events (Get-LLRecentWlanEvents -Hours $config.Diagnostics.EventLookbackHours)
 }
 
 switch ($Command) {
@@ -313,6 +322,7 @@ switch ($Command) {
     "once" {
         Ensure-LLAdmin -ScriptPath $Context.ScriptPath -Command "once"
         Invoke-MonitorTick
+        # A one-shot diagnostic command must not leave process-scoped power requests open.
         Clear-LLPowerRequest
         $state = Read-LLState -StatePath $Context.StatePath
         Set-LLStatePowerRequest -State $state -PowerRequestState (Get-LLPowerRequestState)

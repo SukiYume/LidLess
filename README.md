@@ -32,15 +32,28 @@ When **both** are true, it activates protection. When either becomes false, it
 releases everything and restores your original settings. So protection is only
 ever on while you actually have an agent task running.
 
+## Tested on
+
+Closed-lid behavior depends on the laptop model, firmware, Windows power stack,
+and vendor utilities. These are the real machines/configurations verified so
+far:
+
+| Laptop / Model | Windows build | PowerShell | Result |
+|----------------|---------------|------------|--------|
+| ASUS ROG Zephyrus G14 GA403UV | Windows 11 10.0.26200 (build 26200) | 5.1.26100.8457 / 7.6.2 | Pass: closed-lid AC agent run stayed awake and network-reachable in real use. |
+
 ## Requirements
 
 - Windows 10 or 11 (laptop, for the lid-close scenario).
 - Windows PowerShell 5.1 or PowerShell 7+.
 - Administrator rights (`start`/`stop`/`run`/`once` self-elevate via UAC).
+- An administrator-writable install folder for `start`, such as
+  `%ProgramFiles%\LidLess`. Do not register the background task from Desktop,
+  Downloads, or another user-writable folder.
 
 ## Install
 
-1. Download or clone this repository to any folder.
+1. Download or clone this repository.
 2. If you downloaded it from the internet, unblock the files so PowerShell will
    run them (Windows marks downloaded scripts as blocked):
 
@@ -48,13 +61,17 @@ ever on while you actually have an agent task running.
    Get-ChildItem -Path . -Recurse | Unblock-File
    ```
 
-3. From the project folder, start it:
+3. Move the folder to an administrator-writable location, for example
+   `%ProgramFiles%\LidLess`.
+4. From the installed folder, start it:
 
    ```powershell
    .\LidLess.ps1 start
    ```
 
-That registers and starts the background task. You can close the lid while a
+`start` refuses to register the `SYSTEM` task if the script or `src\` modules
+are writable by a normal user. That registers and starts the background task.
+You can close the lid while a
 configured agent runs. To stop and fully restore your power settings later, run
 `.\LidLess.ps1 stop`.
 
@@ -89,6 +106,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\LidLess.ps1 status
 `start`, `stop`, `run`, and `once` request administrator elevation when needed.
 For foreground debugging with `run` or `once`, open an elevated PowerShell first
 so output stays in the same terminal.
+Foreground `run`/`once` share `state/state.json` with the background `SYSTEM`
+task, so use them for diagnostics only and avoid running them concurrently with
+an installed task unless you are deliberately troubleshooting.
 
 `status` and `doctor` are read-only and can run without elevation. In a
 non-elevated shell, Windows may hide the exact state of the `SYSTEM` scheduled
@@ -189,6 +209,20 @@ presence to count.
 The default is conservative: AC is fully protected, DC is disabled to avoid
 battery drain.
 
+## Known limitations
+
+- Some OEM firmware or vendor utilities can force sleep regardless of Windows
+  power policy. If that happens, LidLess cannot override it from user-space
+  PowerShell.
+- Enterprise Group Policy or device-management tools can overwrite power
+  settings while LidLess is running.
+- Modern Standby networking can still disconnect if the machine is forced into
+  standby. LidLess keeps connectivity by preventing standby while protected,
+  not by making networking reliable inside standby.
+- `powercfg` parsing reads the registry first and falls back to the final
+  hexadecimal values reported by `powercfg`. Very unusual Windows builds or
+  localizations could report those values differently.
+
 ## Uninstall
 
 ```powershell
@@ -208,8 +242,7 @@ can delete too.
 - **The lid still sleeps the machine.** Run `.\LidLess.ps1 doctor`. Confirm the
   matching process appears under `Matches`, that the current power source is
   `enabled` in `config.json`, and that `AC lid` (or `DC lid`) reads
-  `0 (Do nothing)`. Note that some OEM firmware can force sleep regardless of
-  Windows policy; `doctor`'s power events help confirm what triggered it.
+  `0 (Do nothing)`. `doctor`'s power events help confirm what triggered it.
 - **The task is not running.** `status` shows the task state. Re-run
   `.\LidLess.ps1 start` from an elevated prompt and check
   `logs\LidLess.log`. If `status` shows `Access denied`, re-run `status` from

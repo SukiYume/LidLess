@@ -14,11 +14,14 @@ function New-LLDefaultSourceConfig {
 }
 
 function New-LLDefaultConfig {
+    $dc = New-LLDefaultSourceConfig -Enabled $false
+    $dc.PreventHibernate = $false
+
     return [pscustomobject]@{
         ProcessNames = @("claude", "codex")
         PollSeconds = 5
         AC = New-LLDefaultSourceConfig -Enabled $true
-        DC = New-LLDefaultSourceConfig -Enabled $false
+        DC = $dc
         Diagnostics = [pscustomobject]@{
             IncludeRecentPowerEvents = $true
             EventLookbackHours = 12
@@ -49,6 +52,26 @@ function Normalize-LLProcessName {
     }
 
     return $value
+}
+
+function Convert-LLIntegerConfigValue {
+    param(
+        $Value,
+        [int]$DefaultValue,
+        [int]$MinimumValue = [int]::MinValue
+    )
+
+    if ($null -eq $Value) {
+        return [Math]::Max($MinimumValue, $DefaultValue)
+    }
+
+    $text = ([string]$Value).Trim()
+    $parsed = 0
+    if (-not [int]::TryParse($text, [ref]$parsed)) {
+        return [Math]::Max($MinimumValue, $DefaultValue)
+    }
+
+    return [Math]::Max($MinimumValue, $parsed)
 }
 
 function Convert-LLSourceConfig {
@@ -100,7 +123,10 @@ function Get-LLConfig {
         throw "config.json must contain at least one process name."
     }
 
-    $pollSeconds = [Math]::Max(2, [int](Get-LLJsonProperty -Object $raw -Name "pollSeconds" -DefaultValue $defaults.PollSeconds))
+    $pollSeconds = Convert-LLIntegerConfigValue `
+        -Value (Get-LLJsonProperty -Object $raw -Name "pollSeconds" -DefaultValue $defaults.PollSeconds) `
+        -DefaultValue $defaults.PollSeconds `
+        -MinimumValue 2
 
     $oldApplyOnAC = Get-LLJsonProperty -Object $raw -Name "applyOnAC" -DefaultValue $null
     $oldApplyOnDC = Get-LLJsonProperty -Object $raw -Name "applyOnDC" -DefaultValue $null
@@ -114,7 +140,10 @@ function Get-LLConfig {
     $rawDiagnostics = Get-LLJsonProperty -Object $raw -Name "diagnostics" -DefaultValue $null
     $diagnostics = [pscustomobject]@{
         IncludeRecentPowerEvents = [bool](Get-LLJsonProperty -Object $rawDiagnostics -Name "includeRecentPowerEvents" -DefaultValue $defaults.Diagnostics.IncludeRecentPowerEvents)
-        EventLookbackHours = [int](Get-LLJsonProperty -Object $rawDiagnostics -Name "eventLookbackHours" -DefaultValue $defaults.Diagnostics.EventLookbackHours)
+        EventLookbackHours = Convert-LLIntegerConfigValue `
+            -Value (Get-LLJsonProperty -Object $rawDiagnostics -Name "eventLookbackHours" -DefaultValue $defaults.Diagnostics.EventLookbackHours) `
+            -DefaultValue $defaults.Diagnostics.EventLookbackHours `
+            -MinimumValue 1
     }
 
     if (-not $ac.Enabled -and -not $dc.Enabled) {

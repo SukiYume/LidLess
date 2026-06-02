@@ -6,8 +6,27 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-06-02
+
+### Fixed
+
+- `start` now refuses to register the `SYSTEM` scheduled task from a
+  user-writable install folder.
+- Invalid numeric config values now fall back to defaults instead of crashing
+  monitor ticks.
+- Self-elevation now handles cancelled UAC prompts and propagates elevated child
+  exit codes.
+- Non-elevated `run` and `once` no longer block the original shell while their
+  elevated diagnostic window stays open.
+- Built-in Administrator RID 500 is no longer treated as an unsafe normal-user
+  writer in install-path ACL checks.
+- Generated default config now matches the shipped DC hibernate default.
+
 ### Changed
 
+- `once` self-elevation keeps the elevated window open so diagnostic output can
+  be read.
+- Monitor ticks reuse the config already loaded for the current polling cycle.
 - `status` now shows whether the current shell is elevated and explains when
   `Access denied` only means the exact `SYSTEM` task state is hidden.
 - `doctor` now labels non-elevated `powercfg /requests` output as an elevation
@@ -64,7 +83,8 @@ First public release.
 - Locale-robust `powercfg` parsing for non-English Windows.
 - No-dependency test runner under `tests/`.
 
-[Unreleased]: https://github.com/SukiYume/LidLess/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/SukiYume/LidLess/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/SukiYume/LidLess/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/SukiYume/LidLess/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/SukiYume/LidLess/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/SukiYume/LidLess/releases/tag/v1.0.0

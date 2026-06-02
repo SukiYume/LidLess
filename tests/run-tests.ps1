@@ -3,10 +3,11 @@ $ErrorActionPreference = "Stop"
 
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 
-Import-Module (Join-Path $RepoRoot "src\RuntimeSupport.psm1") -Force -DisableNameChecking
+$RuntimeModule = Import-Module (Join-Path $RepoRoot "src\RuntimeSupport.psm1") -Force -DisableNameChecking -PassThru
 Import-Module (Join-Path $RepoRoot "src\Config.psm1") -Force -DisableNameChecking
 Import-Module (Join-Path $RepoRoot "src\StateStore.psm1") -Force -DisableNameChecking
 $DiagnosticsModule = Import-Module (Join-Path $RepoRoot "src\Diagnostics.psm1") -Force -DisableNameChecking -PassThru
+$PowerPolicyModule = Import-Module (Join-Path $RepoRoot "src\PowerPolicy.psm1") -Force -DisableNameChecking -PassThru
 
 $script:Passed = 0
 
@@ -124,7 +125,7 @@ Invoke-LLTest "Status explains access-limited scheduled task state" {
 }
 
 Invoke-LLTest "Config normalizes exe suffix and de-duplicates case-insensitively" {
-    $tempDir = Join-Path $env:TEMP ("alg-test-" + [guid]::NewGuid())
+    $tempDir = Join-Path $env:TEMP ("ll-test-" + [guid]::NewGuid())
     New-Item -ItemType Directory -Path $tempDir | Out-Null
     try {
         $configPath = Join-Path $tempDir "config.json"
@@ -146,8 +147,161 @@ Invoke-LLTest "Config normalizes exe suffix and de-duplicates case-insensitively
     }
 }
 
+Invoke-LLTest "Config falls back for invalid numeric values" {
+    $tempDir = Join-Path $env:TEMP ("ll-test-" + [guid]::NewGuid())
+    New-Item -ItemType Directory -Path $tempDir | Out-Null
+    try {
+        $configPath = Join-Path $tempDir "config.json"
+        @"
+{
+  "processNames": ["codex"],
+  "pollSeconds": "not-a-number",
+  "diagnostics": {
+    "eventLookbackHours": "not-a-number"
+  }
+}
+"@ | Set-Content -Path $configPath -Encoding UTF8
+
+        $config = Get-LLConfig -ConfigPath $configPath
+        Assert-LLEqual 5 $config.PollSeconds "Invalid pollSeconds should fall back to the default."
+        Assert-LLEqual 12 $config.Diagnostics.EventLookbackHours "Invalid eventLookbackHours should fall back to the default."
+    }
+    finally {
+        Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Invoke-LLTest "Legacy applyOn source flags map to source config" {
+    $tempDir = Join-Path $env:TEMP ("ll-test-" + [guid]::NewGuid())
+    New-Item -ItemType Directory -Path $tempDir | Out-Null
+    try {
+        $configPath = Join-Path $tempDir "config.json"
+        @"
+{
+  "processNames": ["codex"],
+  "applyOnAC": false,
+  "applyOnDC": true
+}
+"@ | Set-Content -Path $configPath -Encoding UTF8
+
+        $config = Get-LLConfig -ConfigPath $configPath
+        Assert-LLEqual $false $config.AC.Enabled "Legacy applyOnAC should map to ac.enabled."
+        Assert-LLEqual $true $config.DC.Enabled "Legacy applyOnDC should map to dc.enabled."
+    }
+    finally {
+        Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Invoke-LLTest "Policy restore preserves user-modified owned settings" {
+    $result = & $PowerPolicyModule {
+        $script:FakeValues = @{}
+        foreach ($source in @("AC", "DC")) {
+            foreach ($settingKey in @("LidAction", "StandbyIdle", "HibernateIdle")) {
+                $script:FakeValues["$source/$settingKey"] = 30
+            }
+        }
+        $script:FakeValues["AC/LidAction"] = 1
+        $script:FakeValues["AC/StandbyIdle"] = 900
+        $script:FakeValues["AC/HibernateIdle"] = 1800
+
+        function Get-LLPowerSettingValue {
+            param(
+                [string]$SchemeGuid,
+                [string]$PowerSource,
+                [string]$SettingKey
+            )
+
+            $null = $SchemeGuid
+            return [int]$script:FakeValues["$PowerSource/$SettingKey"]
+        }
+
+        function Set-LLPowerSettingValue {
+            param(
+                [string]$SchemeGuid,
+                [string]$PowerSource,
+                [string]$SettingKey,
+                [int]$Value
+            )
+
+            $null = $SchemeGuid
+            $script:FakeValues["$PowerSource/$SettingKey"] = $Value
+        }
+
+        $state = [pscustomobject]@{ TouchedSchemes = @() }
+        $config = [pscustomobject]@{
+            AC = [pscustomobject]@{
+                Enabled = $true
+                LidCloseDoNothing = $true
+                PreventIdleSleep = $true
+                PreventHibernate = $true
+            }
+            DC = [pscustomobject]@{
+                Enabled = $false
+                LidCloseDoNothing = $true
+                PreventIdleSleep = $true
+                PreventHibernate = $true
+            }
+        }
+
+        Enable-LLPolicyProtection -State $state -Config $config -SchemeGuid "scheme" -LogPath $null | Out-Null
+        $script:FakeValues["AC/StandbyIdle"] = 600
+        Restore-LLPolicyProtection -State $state | Out-Null
+
+        [pscustomobject]@{
+            LidAction = $script:FakeValues["AC/LidAction"]
+            StandbyIdle = $script:FakeValues["AC/StandbyIdle"]
+            HibernateIdle = $script:FakeValues["AC/HibernateIdle"]
+            OwnedStandbyIdleAC = [bool]$state.TouchedSchemes[0].OwnedStandbyIdleAC
+        }
+    }
+
+    Assert-LLEqual 1 $result.LidAction "Owned protected lid action should restore to original value."
+    Assert-LLEqual 600 $result.StandbyIdle "User-modified sleep timeout should not be overwritten."
+    Assert-LLEqual 1800 $result.HibernateIdle "Owned protected hibernate timeout should restore to original value."
+    Assert-LLEqual $false $result.OwnedStandbyIdleAC "Owned flag should clear after restore reconciliation."
+}
+
+Invoke-LLTest "Elevation wait policy avoids blocking diagnostics" {
+    $startWaits = & $RuntimeModule { param($Command) Test-LLWaitForElevatedCommand -Command $Command } "start"
+    $stopWaits = & $RuntimeModule { param($Command) Test-LLWaitForElevatedCommand -Command $Command } "stop"
+    $runWaits = & $RuntimeModule { param($Command) Test-LLWaitForElevatedCommand -Command $Command } "run"
+    $onceWaits = & $RuntimeModule { param($Command) Test-LLWaitForElevatedCommand -Command $Command } "once"
+
+    Assert-LLTrue $startWaits "start should wait so exit codes can propagate."
+    Assert-LLTrue $stopWaits "stop should wait so exit codes can propagate."
+    Assert-LLEqual $false $runWaits "run should not block the original non-elevated shell."
+    Assert-LLEqual $false $onceWaits "once should not wait for its -NoExit diagnostic window."
+}
+
+Invoke-LLTest "Built-in Administrator SID is not treated as unsafe writer" {
+    $rid500Unsafe = & $RuntimeModule {
+        param($SidText)
+        Test-LLUnsafeInstallWriter -IdentityReference $SidText
+    } "S-1-5-21-1111111111-2222222222-3333333333-500"
+    $everyoneUnsafe = & $RuntimeModule {
+        param($SidText)
+        Test-LLUnsafeInstallWriter -IdentityReference $SidText
+    } "S-1-1-0"
+
+    Assert-LLEqual $false $rid500Unsafe "Built-in Administrator RID 500 should be exempt from unsafe writer detection."
+    Assert-LLTrue $everyoneUnsafe "Everyone should be treated as unsafe when it has write access."
+}
+
+Invoke-LLTest "User-writable install path is rejected for SYSTEM task registration" {
+    $tempDir = Join-Path $env:TEMP ("ll-test-" + [guid]::NewGuid())
+    New-Item -ItemType Directory -Path $tempDir | Out-Null
+    try {
+        $findingCount = & $RuntimeModule { param($Path) @(Get-LLUnsafeInstallPathAccess -ScriptRoot $Path).Count } $tempDir
+        Assert-LLTrue ($findingCount -gt 0) "User-writable temp directory should be reported as unsafe for SYSTEM task registration."
+    }
+    finally {
+        Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
 Invoke-LLTest "Legacy state with missing PowerRequest is repaired" {
-    $tempDir = Join-Path $env:TEMP ("alg-test-" + [guid]::NewGuid())
+    $tempDir = Join-Path $env:TEMP ("ll-test-" + [guid]::NewGuid())
     New-Item -ItemType Directory -Path $tempDir | Out-Null
     try {
         $statePath = Join-Path $tempDir "state.json"
