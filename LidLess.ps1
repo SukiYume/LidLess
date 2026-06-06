@@ -205,7 +205,6 @@ function Start-MonitorLoop {
     Write-LLLog -LogPath $Context.LogPath -Message "Monitor loop started."
 
     $consecutiveFailures = 0
-    $maxConsecutiveFailures = 5
 
     while ($true) {
         try {
@@ -216,16 +215,12 @@ function Start-MonitorLoop {
         }
         catch {
             $consecutiveFailures++
-            Write-LLLog -LogPath $Context.LogPath -Message "Monitor tick failed ($consecutiveFailures/$maxConsecutiveFailures): $($_.Exception.Message)"
-            if ($consecutiveFailures -ge $maxConsecutiveFailures) {
-                Write-LLLog -LogPath $Context.LogPath -Message "Monitor exiting after $consecutiveFailures consecutive tick failures so the scheduled task can restart it."
-                try {
-                    Restore-AllProtection -Reason "monitor failure threshold"
-                }
-                catch {
-                    Write-LLLog -LogPath $Context.LogPath -Message "Failed to restore protection before monitor restart: $($_.Exception.Message)"
-                }
-                exit 1
+            Write-LLLog -LogPath $Context.LogPath -Message "Monitor tick failed ($consecutiveFailures): $($_.Exception.Message). Retrying without exiting."
+            try {
+                Restore-AllProtection -Reason "monitor tick failure"
+            }
+            catch {
+                Write-LLLog -LogPath $Context.LogPath -Message "Failed to restore protection after monitor tick failure: $($_.Exception.Message)"
             }
             Start-Sleep -Seconds 10
         }

@@ -216,10 +216,40 @@ function Format-LLDurationSeconds {
     return "$Seconds sec ($minutes min)"
 }
 
+function Get-LLObjectPropertyValue {
+    param(
+        $Object,
+        [string[]]$Names
+    )
+
+    if ($null -eq $Object) {
+        return $null
+    }
+
+    foreach ($name in $Names) {
+        $property = $Object.PSObject.Properties[$name]
+        if ($null -ne $property -and $null -ne $property.Value) {
+            return $property.Value
+        }
+    }
+
+    return $null
+}
+
 function Format-LLProcessMatch {
     param($Process)
 
-    return "$($Process.ProcessName)[$($Process.Id)]"
+    $name = Get-LLObjectPropertyValue -Object $Process -Names @("ProcessName", "Name")
+    $id = Get-LLObjectPropertyValue -Object $Process -Names @("Id", "ProcessId")
+
+    if ([string]::IsNullOrWhiteSpace([string]$name)) {
+        $name = "unknown-process"
+    }
+    if ([string]::IsNullOrWhiteSpace([string]$id)) {
+        $id = "unknown-id"
+    }
+
+    return "$name[$id]"
 }
 
 Export-ModuleMember -Function Test-LLIsAdmin, Ensure-LLAdmin, Assert-LLTrustedInstallPath, Write-LLLog, Format-LLDurationSeconds, Format-LLProcessMatch

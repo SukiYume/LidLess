@@ -6,6 +6,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-06-07
+
+### Fixed
+
+- Fixed monitor crashes when a process match object exposes `Name`/`ProcessId`
+  instead of `ProcessName`/`Id`.
+- Monitor tick failures now restore protection state and keep retrying instead
+  of exiting after five consecutive failures.
+
 ## [1.1.1] - 2026-06-02
 
 ### Fixed
@@ -90,7 +99,8 @@ First public release.
 - Locale-robust `powercfg` parsing for non-English Windows.
 - No-dependency test runner under `tests/`.
 
-[Unreleased]: https://github.com/SukiYume/LidLess/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/SukiYume/LidLess/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/SukiYume/LidLess/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/SukiYume/LidLess/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/SukiYume/LidLess/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/SukiYume/LidLess/compare/v1.0.1...v1.0.2

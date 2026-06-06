@@ -366,4 +366,13 @@ Invoke-LLTest "Process match formatting is shared" {
     Assert-LLEqual "codex[1234]" (Format-LLProcessMatch -Process $process) "Unexpected match text."
 }
 
+Invoke-LLTest "Process match formatting accepts alternate process property names" {
+    $process = [pscustomobject]@{
+        Name = "codex"
+        ProcessId = 1234
+    }
+
+    Assert-LLEqual "codex[1234]" (Format-LLProcessMatch -Process $process) "Alternate process properties should not break monitor ticks."
+}
+
 Write-Host "All tests passed ($script:Passed)."
